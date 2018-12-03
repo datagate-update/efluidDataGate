@@ -60,6 +60,7 @@ import fr.uem.efluid.services.types.PreparedMergeIndexEntry;
 import fr.uem.efluid.services.types.RollbackLine;
 import fr.uem.efluid.services.types.SharedPackage;
 import fr.uem.efluid.tools.AttachmentProcessor;
+import fr.uem.efluid.tools.ValueApplyTransformer;
 import fr.uem.efluid.utils.ApplicationException;
 import fr.uem.efluid.utils.Associate;
 import fr.uem.efluid.utils.FormatUtils;
@@ -129,6 +130,9 @@ public class CommitService extends AbstractApplicationService {
 
 	@Autowired
 	private FeatureManager features;
+
+	@Autowired(required = false)
+	private ValueApplyTransformer transformer;
 
 	/**
 	 * <p>
@@ -448,6 +452,27 @@ public class CommitService extends AbstractApplicationService {
 
 	/**
 	 * <p>
+	 * Process payload transform if a compliant transformer is defined at import level
+	 * </p>
+	 * 
+	 * @param commitToProcess
+	 */
+	private void transformCommitToProcessOnImport(List<Commit> commitToProcess) {
+
+		// Update payload on all concerned index entries
+		if (commitToProcess.size() > 0) {
+			commitToProcess.stream()
+					.flatMap(c -> c.getIndex().stream())
+					.filter(i -> this.transformer.isApplyOnDictionaryEntry(i.getDictionaryEntry()))
+					.forEach(i -> {
+						// Update payload with transformer
+						i.setPayload(this.transformer.transformPayload(i.getDictionaryEntry(), i.getPayload()));
+					});
+		}
+	}
+
+	/**
+	 * <p>
 	 * Reserved for launch from <tt>PilotableCommitPreparationService</tt>
 	 * 
 	 * @param importFile
@@ -548,6 +573,11 @@ public class CommitService extends AbstractApplicationService {
 				lobsPckg.getContent().stream()
 						.distinct()
 						.collect(Collectors.toConcurrentMap(l -> l.getHash(), l -> l.getData())));
+
+		// Transform "toProcess" if required
+		if (this.transformer != null) {
+			transformCommitToProcessOnImport(toProcess);
+		}
 
 		// Create the future merge commit info
 		currentPreparation.setCommitData(new CommitEditData());

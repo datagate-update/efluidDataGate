@@ -77,6 +77,20 @@ public class Associate<K, V> {
 	}
 
 	/**
+	 * <p>
+	 * Useful when a value can split in 2 parts
+	 * </p>
+	 * 
+	 * @param value
+	 * @param regexp
+	 * @return
+	 */
+	public static Associate<String, String> ofSplited(String value, String regexp) {
+		String[] splited = value.split(regexp);
+		return of(splited[0], splited[1]);
+	}
+
+	/**
 	 * @param ones
 	 * @param two
 	 * @return
