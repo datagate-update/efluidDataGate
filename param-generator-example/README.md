@@ -1,10 +1,10 @@
-# Utilisation de l’API de spécification du paramètrage
+# Utilisation de l’API de spécification du paramètrage avec DataGate
 
 ## Introduction
 
 ### Quelques principes sur la gestion du paramètrage
 
-Une nouvelle application de gestion de paramètrage en base de données est en cours de mise en place. Cet outil permet d’identifier toutes les modifications de paramètrage et de les livrer sur des environnements distants, en gérant les conflits, 
+Une nouvelle application de gestion de paramètrage en base de données est en cours de mise en place. Cet outil, appelé DataGate, permet d’identifier toutes les modifications de paramètrage et de les livrer sur des environnements distants, en gérant les conflits, 
 
 les différences de versions et les dépendances entre données. Il permet également d’annuler des modifications de paramètrage dans une base de données Efluid.
 
@@ -18,7 +18,7 @@ La définition d’un dictionnaire valide est essentiel au bon fonctionnement de
 
 ### Rôle de l’API de spécification du dictionnaire
 
-Bien que l’application propose une interface de paramètrage complète pour spécifier un dictionnaire, une API est également proposée pour le définir au niveau du code java.
+Bien que DataGate propose une interface de paramètrage complète pour spécifier un dictionnaire, une API est également proposée pour le définir au niveau du code java.
 
 En effet la base de données Efluid est associée à un modèle de données spécifié dans le code Java, et profiter de ce code pour définir le dictionnaire de paramètrage apporte un gain de temps conséquent.
 
@@ -58,7 +58,7 @@ Un domaine fonctionnel est spécifié avec l’annotation **fr.uem.efluid.Parame
 
 Toutes les informations gérées, dont les domaines fonctionnels, sont regroupés par projets. Les projets sont indépendants, et peuvent utiliser des données identiques d’un projet à un autre. Les domaines et les projets sont intrinsèquement liées dans l’API.
 
-Un projet est représenté par un nom (exemple : « Base Efluid Production ») et une couleur. La couleur permet d’identifier directement le projet en cours d’édition dans l’outil de gestion du paramètrage.
+Un projet est représenté par un nom (exemple : « Base Efluid Production ») et une couleur. La couleur permet d’identifier directement le projet en cours d’édition dans DataGate.
 
 L’API permet de spécifier un ou plusieurs projets via l’annotation **fr.uem.efluid.ParameterProject** qui ne peut être spécifiée qu’au sein d’un domaine fonctionnel, pour l’attribut **project()**
 
@@ -70,7 +70,7 @@ L’API permet de spécifier un ou plusieurs projets via l’annotation **fr.uem
 *Le projet est donc défini avec le domaine, avec quelques règles d’utilisation :*
 
 * Si 2 projets sont identifiés avec le même nom, alors le générateur va considérer que c’est le même projet.
-* Si aucun projet n’est spécifié dans un domaine (l’attribut « project » de @ParameterDomain n’est pas obligatoire) alors un projet par défaut est utilisé : « Default », couleur « Grise ». Ce projet « Default » est systématiquement présent dans l’application de gestion du paramètrage 
+* Si aucun projet n’est spécifié dans un domaine (l’attribut « project » de @ParameterDomain n’est pas obligatoire) alors un projet par défaut est utilisé : « Default », couleur « Grise ». Ce projet « Default » est systématiquement présent dans DataGate
 
 ### Exemples de spécifications de domaines et de projets
 
@@ -127,7 +127,7 @@ Des annotations spécifiques permettent de préciser les clés : elles seront ab
 
 ### Données nécessaires pour la spécification des colonnes à utiliser
 
-L’application de gestion de paramètrage utilise un format interne « à plat » : les données extraites sont représentées sous forme de ligne de données compressées et hashées. Pour produire ces données il est nécessaire d’indiquer quelles **colonnes** utiliser, mais sans plus de détails. En effet le typage est par exemple inutile pour le fonctionnement de l’application.
+DataGate utilise un format interne « à plat » : les données extraites sont représentées sous forme de ligne de données compressées et hashées. Pour produire ces données il est nécessaire d’indiquer quelles **colonnes** utiliser, mais sans plus de détails. En effet le typage est par exemple inutile pour le fonctionnement de l’application.
 
 Les colonnes à utiliser peuvent être spécifiées avec différentes solution dans l’API fournie
 
@@ -365,9 +365,9 @@ Les values et keys peuvent être spécifiées directement dans les **@ParameterT
 
 ### Principes du lien et du mapping
 
-Le **lien** est un type de valeur. Il est définie comme une association 1-N pour une colonne de la table de paramètrage, renvoyant vers la clé d'une autre table de paramètrage (une Foreign Key donc). Il ne peut pas être bidirectionnel, l'application ne gère que la liaison dans le sens "ManyToOne", mais pas "OneToMany".
+Le **lien** est un type de valeur. Il est définie comme une association 1-N pour une colonne de la table de paramètrage, renvoyant vers la clé d'une autre table de paramètrage (une Foreign Key donc). Il ne peut pas être bidirectionnel, DataGate ne gère que la liaison dans le sens "ManyToOne", mais pas "OneToMany".
 
-Il permet à l'application de gestion du paramètrage de garantir la cohérence des données en vérifiant que les liaisons entre table sont respectées et valides. 
+Il permet à DataGate de garantir la cohérence des données en vérifiant que les liaisons entre table sont respectées et valides. 
 
 Il ne peut être porté que sur une valeur scalaire, représenté généralement en java par une autre classe d'entité mappée, comme dans cet exemple :
 
@@ -407,7 +407,7 @@ Le lien est identifié avec **fr.uem.efluid.ParameterLink**. Il vient **obligato
 
 Cette annotation est héritable.
 
-**A noter** : Même si la colonne de liaison (valeur de **toParameter**) est un identifiant technique non mappé comme clé, ce n'est pas un soucis pour l'application de gestion du paramètrage : c'est toujours la clé fonctionnelle qui sera gérée au final (les requêtes se feront en utilisant une jointure sur l'identifiant technique, mais une selection par l'identifiant fonctionnel)
+**A noter** : Même si la colonne de liaison (valeur de **toParameter**) est un identifiant technique non mappé comme clé, ce n'est pas un soucis pour DataGate : c'est toujours la clé fonctionnelle qui sera gérée au final (les requêtes se feront en utilisant une jointure sur l'identifiant technique, mais une selection par l'identifiant fonctionnel)
 
 ### Spécifier un mapping
 
@@ -423,7 +423,7 @@ Le mapping est globalement basé sur les principes du lien, mais avec plus d'inf
 * **fromColumn** : la colonne mappée dans l'entité locale si elle ne peut pas être déterminée (si ce n'est pas la clé par exemple)
 * **name** : un nom fonctionnel optionnel pour le mapping
 
-**A noter** : Bien que géré dans l'API et dans le dictionnaire, la version actuelle de l'application de gestion du paramètrage ne traite pas encore les données dans les mappings.
+**A noter** : Bien que géré dans l'API et dans le dictionnaire, la version actuelle de DataGate ne traite pas encore les données dans les mappings.
 
 ### Cas des clés composites
 
@@ -523,11 +523,54 @@ Ici la table est mappée car **MyOtherSubType** hérite de **MyType** qui est an
 
 Ici c'est le type lié **TabWithCompositeKey** qui utilise une clé composite (3 colonnes : "BIZ_KEY_ONE", "BIZ_KEY_TWO" et "BIZ_KEY_THREE") et donc la table de **TabWithRefOnCompositeKey** a 3 colonnes avec FK pour gérer le lien. L'ordre utilisé entre les toColumn et les composites values est obligatoirement identique.
 
+## Specification des "transformers" pour la régionalisation des données
+
+### Principes de la régionalisation et application avec DataGate
+
+Il y a différents cas d'utilisation se rapportant à la régionalisation dans Efluid, mais pour résumer :
+
+* Les données d'une instance Efluid Source peuvent être adaptées spécifiquement sur certaines destination
+* L'adaptation passe par la recherche de valeurs à substituer, et par l'application de nouvelles valeur
+* Les données de substitution viennent généralement d'une table
+* Cette table est très volumineuse, et ne fait pas partie du paramètrage. Seule une petite partie de ses données sont nécessaires à chaque modification de paramètrage
+
+Datagate fourni en conséquence de quoi spécifier quelle est la ou les tables sources, et va se charger d'empacter les données nécessaires pour transformer le contenu d'un lot. Pour détecter les données nécessaires et faire les substitutions, un composant spécifique peut être utilisé.
+
+Il faut donc spécifier dans le dictionnaire :
+
+* La table source pour les substitutions
+* Le composant de traitement
+
+### Spécification des sources et composants de régionalisation avec l'API
+
+L'API annotation de Datagate permet de spécifier la ou les tables sources et les composants associés. Tout est réalisé avec l'annotation `@ParameterTransformer`. C'est une sub-annotation utilisée dans l'attribut `transformers` de `@ParameterProject`
+
+Exemple d'utilisation sur un package-info.java :
+
+	@ParameterDomain(name = "Autre domaine", project = @ParameterProject(
+			name = "My project",
+			color = ProjectColor.BLUE,
+			transformers = @ParameterTransformer(table = "regionalisation_data", transformerClass = "com.efluid.RegionalizationTransformer")))
+	package fr.uem.efluid.sample.other;
+	
+	import fr.uem.efluid.ParameterDomain;
+	import fr.uem.efluid.ParameterProject;
+	import fr.uem.efluid.ParameterTransformer;
+	import fr.uem.efluid.ProjectColor;
+
+    
+On peut spécifier plusieurs `@ParameterTransformer`. Les attributs sont : 
+
+* `table` : le nom de la table de source
+* `transformerClass` : le classname complet pour le composant de transformation à utiliser.
+
+On peut avoir plusieurs configs pointants sur la même source. C'est plutôt le `transformerClass` qui identifie les transformations et se charge de tout. Ce composant étant géré dans Datagate, il ne peut être spécifié ici qu'en String. Il est interessant de préparer les composants utilisables de Efluid dans des constantes pour les référencer directement.
+
 ## Utilisation du générateur
 
 L'API à base d'annotation permet de spécifier le dictionnaire, mais c'est un générateur, sous la forme d'un plugin maven, qui prend en compte concrètement ces données lors du build du projet pour générer les informations attendues.
 
-L'application de gestion de paramètrage attend un fichier spécifique au format ".par" pour préciser le dictionnaire. Le générateur produit ce fichier à partir du code, pour qu'il soit importé manuellement, ou bien peut directement uploader ce fichier dans une instance d'application spécifiée.
+DataGate attend un fichier spécifique au format ".par" pour préciser le dictionnaire. Le générateur produit ce fichier à partir du code, pour qu'il soit importé manuellement, ou bien peut directement uploader ce fichier dans une instance d'application spécifiée.
 
 ### Mise en place du plugin
 
