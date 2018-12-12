@@ -1,6 +1,10 @@
 package fr.uem.efluid.utils;
 
-import static fr.uem.efluid.utils.ErrorType.*;
+import static fr.uem.efluid.utils.ErrorType.DATA_READ_ERROR;
+import static fr.uem.efluid.utils.ErrorType.DATA_WRITE_ERROR;
+import static fr.uem.efluid.utils.ErrorType.JSON_READ_ERROR;
+import static fr.uem.efluid.utils.ErrorType.JSON_WRITE_ERROR;
+import static fr.uem.efluid.utils.ErrorType.TMP_ERROR;
 
 import java.io.File;
 import java.io.IOException;
@@ -12,6 +16,7 @@ import java.nio.file.StandardOpenOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -24,27 +29,32 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
+import fr.uem.efluid.model.Shared;
 import fr.uem.efluid.utils.json.LocalDateModule;
 import fr.uem.efluid.utils.json.LocalDateTimeModule;
 
 /**
  * <p>
  * Helper with a very basic data model for processing input and output of <tt>Shared</tt>
- * as basic String values
+ * as basic String values.
  * </p>
  * <p>
- * Input/output process can be seen as similare to a serialization process
+ * Input/output process can be seen as similare to a serialization process. This utils
+ * provides builders / chained helpers to process serialization and deserialization of all
+ * the various type of values met in shared entities
  * </p>
  * 
  * @author elecomte
  * @since v0.0.1
- * @version 2
+ * @version 3
  */
 public class SharedOutputInputUtils {
 
 	private static final String SYSTEM_DEFAULT_TMP_DIR = System.getProperty("java.io.tmpdir");
 
 	private static final String SERIAL_FILE_PARTS_SPLITER = ".";
+
+	private static final String INLINED_UUIDS_SPLITTER = ";";
 
 	private static final String PLUS_CHAR_REPLACE = "___";
 
@@ -267,6 +277,32 @@ public class SharedOutputInputUtils {
 		}
 
 		/**
+		 * <p>
+		 * Dedicated for shared entities, associated by UUIDs
+		 * </p>
+		 * <p>
+		 * Will inline UUIDs in one value
+		 * </p>
+		 * 
+		 * @param key
+		 * @param items
+		 * @return
+		 */
+		public JsonPropertiesWriter with(String key, List<? extends Shared> items) {
+			if (items != null && !items.isEmpty()) {
+
+				// Get joined uuids
+				String uuids = items.stream()
+						.map(Shared::getUuid)
+						.map(UUID::toString)
+						.collect(Collectors.joining(INLINED_UUIDS_SPLITTER));
+
+				this.properties.put(key, uuids);
+			}
+			return this;
+		}
+
+		/**
 		 * Dedicated for UUID
 		 * 
 		 * @param key
@@ -302,6 +338,18 @@ public class SharedOutputInputUtils {
 		public JsonPropertiesWriter with(String key, Object value) {
 			if (value != null) {
 				this.properties.put(key, value.toString());
+			}
+			return this;
+		}
+
+		/**
+		 * @param key
+		 * @param value
+		 * @return
+		 */
+		public JsonPropertiesWriter withB64(String key, Object value) {
+			if (value != null) {
+				this.properties.put(key, FormatUtils.encodeAsString(value.toString()));
 			}
 			return this;
 		}
@@ -384,6 +432,27 @@ public class SharedOutputInputUtils {
 		}
 
 		/**
+		 * <p>
+		 * Process inlined list of UUIDs to get the corresponding UUID objects
+		 * </p>
+		 * 
+		 * @param name
+		 * @return
+		 */
+		public List<UUID> getPropertyUUIDs(String name) {
+			Object jsonProperty = this.jsonProperties.get(name);
+			if (jsonProperty == null) {
+				return null;
+			}
+
+			String uuids = jsonProperty.toString();
+
+			return Stream.of(uuids.split(INLINED_UUIDS_SPLITTER))
+					.map(UUID::fromString)
+					.collect(Collectors.toList());
+		}
+
+		/**
 		 * @param name
 		 * @return
 		 */
@@ -411,10 +480,42 @@ public class SharedOutputInputUtils {
 		 * @param apply
 		 * @return
 		 */
+		public OutputJsonPropertiesReader applyB64String(String name, Consumer<String> apply) {
+			String prop = getPropertyString(name);
+			if (prop != null) {
+				apply.accept(FormatUtils.decodeAsString(prop));
+			}
+			return this;
+		}
+
+		/**
+		 * @param name
+		 * @param apply
+		 * @return
+		 */
 		public OutputJsonPropertiesReader applyString(String name, Consumer<String> apply) {
 			String prop = getPropertyString(name);
 			if (prop != null) {
 				apply.accept(prop);
+			}
+			return this;
+		}
+
+		/**
+		 * <p>
+		 * If present, get corresponding property with inlined UUIDs, extract them as a
+		 * list of UUIDs and process given consumer to init associated entities
+		 * </p>
+		 * 
+		 * @param name
+		 * @param apply
+		 * @return
+		 */
+		public OutputJsonPropertiesReader applyUUIDs(String name, Consumer<UUID> apply) {
+			List<UUID> prop = getPropertyUUIDs(name);
+			if (prop != null) {
+				// Apply all
+				prop.forEach(apply);
 			}
 			return this;
 		}

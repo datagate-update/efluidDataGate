@@ -7,6 +7,8 @@ package fr.uem.efluid.utils;
  */
 public class ApplicationException extends RuntimeException {
 
+	private static final long serialVersionUID = 20181212;
+
 	private final ErrorType error;
 
 	private final Long timestamp = Long.valueOf(System.currentTimeMillis());

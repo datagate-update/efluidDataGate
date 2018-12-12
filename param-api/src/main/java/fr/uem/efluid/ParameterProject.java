@@ -8,12 +8,13 @@ import java.lang.annotation.Retention;
 
 /**
  * <p>
- * Specification for active project in current package / meta annotation
+ * Specification for active project in current package / meta annotation. The specified
+ * transformer sources are also specified directly at project level
  * </p>
  * 
  * @author elecomte
  * @since v0.2.0
- * @version 1
+ * @version 2
  */
 @Documented
 @Inherited
@@ -32,5 +33,22 @@ public @interface ParameterProject {
 	 */
 	String name();
 
+	/**
+	 * <p>
+	 * Predefined color identity for the project
+	 * </p>
+	 * 
+	 * @return
+	 */
 	ProjectColor color();
+
+	/**
+	 * <p>
+	 * Optional specified transformers for the project. Transformers are dictionary items
+	 * specified directly at the project level
+	 * </p>
+	 * 
+	 * @return
+	 */
+	ParameterTransformer[] transformers() default {};
 }

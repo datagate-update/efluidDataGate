@@ -34,7 +34,7 @@ import net.lingala.zip4j.util.Zip4jConstants;
 public class ExportService {
 
 	protected static final String PACKAGE_START_ENDING = "]\n";
-	
+
 	protected static final String PACKAGE_START = "[pack|%s|%s|%s|%s" + PACKAGE_START_ENDING;
 
 	protected static final String PACKAGE_END = "[/pack]\n";
@@ -77,7 +77,8 @@ public class ExportService {
 
 				// Identifier at start of package
 				append(pckgFile,
-						String.format(PACKAGE_START, pckg.getReloadableTypeName(), pckg.getName(), pckg.getExportDate(), pckg.getVersion()));
+						String.format(PACKAGE_START, pckg.getReloadableTypeName(), pckg.getName(), pckg.getExportDate(),
+								pckg.getVersion()));
 
 				// Package content
 				pckg.serialize().forEach(s -> append(pckgFile, ITEM_START + s + ITEM_END));
@@ -117,7 +118,7 @@ public class ExportService {
 			});
 			return zip;
 		} catch (ZipException e) {
-			throw new ApplicationException(EXPORT_ZIP_FAILED, "Cannot zip files " + unzipped);
+			throw new ApplicationException(EXPORT_ZIP_FAILED, "Cannot zip files " + unzipped, e);
 		}
 	}
 

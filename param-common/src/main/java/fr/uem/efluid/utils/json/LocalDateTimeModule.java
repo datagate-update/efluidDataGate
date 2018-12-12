@@ -23,6 +23,8 @@ import fr.uem.efluid.utils.FormatUtils;
  */
 public class LocalDateTimeModule extends SimpleModule {
 
+	private static final long serialVersionUID = 20181212;
+
 	public LocalDateTimeModule() {
 		super();
 		addSerializer(LocalDateTime.class, new LocalDateTimeSerializer());
@@ -34,6 +36,8 @@ public class LocalDateTimeModule extends SimpleModule {
 	 * @since 0.1.0
 	 */
 	public static class LocalDateTimeDeserializer extends StdScalarDeserializer<LocalDateTime> {
+
+		private static final long serialVersionUID = 20181212;
 
 		private DateTimeFormatter formatter = DateTimeFormatter.ofPattern(FormatUtils.DATE_TIME_FORMAT);
 
@@ -63,6 +67,8 @@ public class LocalDateTimeModule extends SimpleModule {
 	 * @since 0.1.0
 	 */
 	public static class LocalDateTimeSerializer extends StdScalarSerializer<LocalDateTime> {
+
+		private static final long serialVersionUID = 20181212;
 
 		private DateTimeFormatter formatter = DateTimeFormatter.ofPattern(FormatUtils.DATE_TIME_FORMAT);
 
