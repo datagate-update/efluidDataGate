@@ -71,7 +71,7 @@ public class TweakedAsyncDriver extends FutureAsyncDriver {
 			try {
 				Thread.sleep(250);
 			} catch (InterruptedException e) {
-				LOGGER.debug("Interrupted delay in test");
+				LOGGER.debug("Interrupted delay in test",e);
 			}
 			action.accept(source);
 		});

@@ -15,7 +15,7 @@ import fr.uem.efluid.model.entities.DictionaryEntry;
  * @since v0.0.8
  * @version 1
  */
-public interface ApplyTransformer {
+public interface DirectTransformer extends Transformer {
 
 	/**
 	 * @param dict
@@ -24,9 +24,4 @@ public interface ApplyTransformer {
 	 */
 	String transformPayload(DictionaryEntry dict, String payload);
 
-	/**
-	 * @param dict
-	 * @return
-	 */
-	boolean isApplyOnDictionaryEntry(DictionaryEntry dict);
 }

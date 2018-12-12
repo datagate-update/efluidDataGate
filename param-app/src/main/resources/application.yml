@@ -57,13 +57,11 @@ param-efluid:
         class-name: fr.uem.efluid.tools.EfluidDatabaseIdentifier
         show-sql: true
     
-    efluid-region-transform:
-        code-table: MY_TABLE
-        code-from-column: FROM_VAL
-        code-to-column: TO_VAL
-        apply-to:
-           - TMODELE.CODE
-           - TTABLE_AUTRE.COLUMN
+    transformers:
+        sourced-transformers:
+           - com.efluid.TestTransformer
+        direct-transformers:
+           - com.efluid.UpperCaseValueApplyTranformer   
         
 ## TECH FEATURES CUSTOM
 spring:

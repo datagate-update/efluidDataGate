@@ -18,14 +18,21 @@ import fr.uem.efluid.services.types.Value;
  * </p>
  * 
  * @author elecomte
- * @since v0.0.8
+ * @since v0.3.0
  * @version 1
  */
-public abstract class ValueApplyTransformer implements ApplyTransformer {
+public abstract class ValueApplyTransformer implements DirectTransformer {
 
 	@Autowired
 	private ManagedValueConverter converter;
 
+	/**
+	 * @param dict
+	 * @param payload
+	 * @return
+	 * @see fr.uem.efluid.tools.DirectTransformer#transformPayload(fr.uem.efluid.model.entities.DictionaryEntry,
+	 *      java.lang.String)
+	 */
 	@Override
 	public String transformPayload(DictionaryEntry dict, String payload) {
 

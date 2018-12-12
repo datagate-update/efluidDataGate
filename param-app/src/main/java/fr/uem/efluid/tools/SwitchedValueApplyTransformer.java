@@ -21,7 +21,7 @@ import fr.uem.efluid.services.types.Value;
  * </p>
  * 
  * @author elecomte
- * @since v0.0.8
+ * @since v0.3.0
  * @version 1
  */
 public abstract class SwitchedValueApplyTransformer extends ValueApplyTransformer {
@@ -40,11 +40,11 @@ public abstract class SwitchedValueApplyTransformer extends ValueApplyTransforme
 	 */
 	public void addSupportOn(String tableName, String valueName) {
 
-		tableApplies.add(tableName);
+		this.tableApplies.add(tableName);
 
 		// No details on value apply = apply on all
 		if (valueName.equals(ALL)) {
-			valueApplies.remove(tableName);
+			this.valueApplies.remove(tableName);
 			LOGGER.debug("Add transformer support for table {}, and all values", tableName);
 		}
 

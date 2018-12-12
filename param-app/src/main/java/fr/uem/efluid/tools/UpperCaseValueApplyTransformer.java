@@ -9,7 +9,7 @@ import fr.uem.efluid.services.types.Value;
  * </p>
  * 
  * @author elecomte
- * @since v0.0.8
+ * @since v0.3.0
  * @version 1
  */
 public class UpperCaseValueApplyTransformer extends ValueApplyTransformer {
@@ -17,6 +17,10 @@ public class UpperCaseValueApplyTransformer extends ValueApplyTransformer {
 	private final String tablename;
 	private final String colname;
 
+	/**
+	 * @param tablename
+	 * @param colname
+	 */
 	public UpperCaseValueApplyTransformer(String tablename, String colname) {
 		super();
 		this.tablename = tablename;
@@ -30,7 +34,7 @@ public class UpperCaseValueApplyTransformer extends ValueApplyTransformer {
 	 * @see fr.uem.efluid.tools.ValueApplyTransformer#transformValue(fr.uem.efluid.model.entities.DictionaryEntry,
 	 *      fr.uem.efluid.services.types.Value)
 	 */
-
+	@Override
 	public String transformValue(DictionaryEntry dict, Value value) {
 
 		if (this.tablename.equals(dict.getTableName()) && this.colname.equals(value.getName())) {
