@@ -30,10 +30,12 @@ Documentation en cours de mise en place. Les sections non cliquables dans l'inde
   * API de spécification
   * Plugin maven
 * Développement
+  * [Outillage (poste de dev)](dev-tools.md)
   * Démarrage
   * Solutions technique en place
   * Architecture générale
   * [Tester l'application avec cucumber](cucumber-testing.md)
+  * [Manipuler les fichiers export .par](read-export.md)
   * Développer des extensions
     * Support limité des extensions
     * [Transformer](transformer-develop.md)
