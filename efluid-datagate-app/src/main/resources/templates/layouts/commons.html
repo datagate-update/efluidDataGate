@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="error-display (code,payload)">
+			<span th:if="${code}">
+				<span th:switch="${code.name()}">
+					<p th:case="'PREPARATION_INTERRUPTED'">La préparation du diff a été interrompue</p>
+					<p th:case="'PREPARATION_BIZ_FAILURE'">Le traitement du diff a rencontré une erreur suivante</p>
+					<p th:case="'PREPARATION_CANNOT_START'">Impossible de démarrer un diff quand un traitement est déjà en cours</p>
+					<p th:case="'UNSUPPORTED_UUID'">L'identifiant uuid indiqué n'est pas valide</p>
+					<p th:case="'COMMIT_IMPORT_INVALID'">Le fichier d'import de lot de modification n'est pas valide ou référence des données inconnues</p>
+					<p th:case="'COMMIT_EXISTS'">Le lot de préparation indiqué n'existe pas</p>
+					<p th:case="'COMMIT_MISS_COMMENT'">Le commentaire est obligatoire lors de l'enregistrement d'un lot</p>
+					<p th:case="'METADATA_WRONG_SCHEMA'">
+						Le schéma <span th:text="${payload}">demo</span> configuré pour le filtrage des métadonnées n'existe pas 
+						dans la BDD managée courante
+					</p>
+					<p th:case="'METADATA_WRONG_TYPE'">La lecture des métadonnées a été démarrée avec un type de base de données incorrect. Le driver ne correspond pas au format de BDD?</p>
+					<p th:case="'METADATA_FAILED'">La lecture des métadonnées n'est pas possible sur la base de donnée gérée</p>
+					<p th:case="'METADATA_WRONG_TABLE'">Aucune table <span th:text="${payload}">demo</span> n'est accessible dans le schéma courant, la mise à jour des metadonnées n'est pas possible</p>
+					<p th:case="'VALUE_CHECK_FAILED'">Le contrôle des données n'est pas possible sur la base de donnée gérée</p>
+					<p th:case="'VALUE_SHA_UNSUP'">Le format de hashage prévu n'est pas supporté sur l'environnement actuel</p>
+					<p th:case="'APPLY_FAILED'">
+						L'application des modifications sélectionnées rencontre une l'erreur critique suivante au niveau de la base de données :
+						<span th:text="${payload}" class="query-error">details</span>. Merci de contacter le support technique
+					</p>
+					<p th:case="'DIC_NO_KEY'">La clé est obligatoire dans la spécification d'une table de paramètrage</p>
+					<p th:case="'DIC_TOO_MANY_KEYS'">Le nombre de colonnes sélectionnées pour les clés composites ne doit pas dépasser un maximum de 5</p>
+					<p th:case="'DIC_ENTRY_NOT_FOUND'">Aucune entrée de dictionnaire trouvée pour l'identifiant donné</p>
+					<p th:case="'DOMAIN_NOT_EXIST'">Au moins un domaine fonctionnel doit avoir été créé dans le projet courant pour pouvoir créer une table de paramètrage</p>
+					<p th:case="'IMPORT_FAIL_FILE'">Le fichier importé ne peut pas être stocké localement</p>
+					<p th:case="'EXPORT_FAIL_FILE'">Le fichier d'export ne peut pas être préparé</p>
+					<p th:case="'IMPORT_WRONG_TYPE'">Le fichier importé référence un type de package non supporté</p>
+					<p th:case="'IMPORT_WRONG_VERSION'">La version du traitement d'import est différente de celle indiquée dans le fichier importé</p>
+					<p th:case="'IMPORT_WRONG_INSTANCE'">Le composant de package indiqué ne peut pas être initialisé</p>
+					<p th:case="'EXPORT_WRONG_APPEND'">Impossible de préparer le fichier d'export en raison d'un problème d'accès système</p>
+					<p th:case="'EXPORT_ZIP_FAILED'">La compression du fichier d'export est impossible</p>
+					<p th:case="'IMPORT_ZIP_FAILED'">La décompression du fichier importé est impossible</p>
+					<p th:case="'IMPORT_WRONG_READ'">Impossible d'accéder au contenu du fichier importé</p>
+					<p th:case="'IMPORT_RUNNING'">
+						Un import de lots de modification est déjà en cours : impossible de démarrer un nouveau lot local tant que l'import n'est
+						pas complété ou abandonné.<br/>
+						<a href="pull.html" th:href="@{/ui/pull}" class="btn btn-dark btn-sm">Accéder à l'écran de traitement d'import</a>&nbsp;&nbsp;
+						<a href="#" th:href="@{/ui/prepare/cancel}" class="btn btn-secondary btn-sm">Abandonner l'import en cours</a>
+					</p>
+					<p th:case="'MERGE_RESOLUTION_UNKNOWN'">Le cas de resolution de merge donné n'est pas supporté</p>
+					<p th:case="'UPLOAD_WRG_DATA'">Le format des données importées n'est pas supporté par l'application</p>
+					<p th:case="'TMP_ERROR'">Le système ne permet pas la préparation du fichier temporaire</p>
+					<p th:case="'DATA_WRITE_ERROR'">Le système ne permet d'écrire le fichier temporaire de données au nom de <span th:text="${payload}">file</span>.data</p>
+					<p th:case="'DATA_READ_ERROR'">Le système ne permet de lire le fichier temporaire de données au nom de <span th:text="${payload}">file</span>.data</p>
+					<p th:case="'JSON_WRITE_ERROR'">Le format sérialisé ne peut pas être écrit avec les données indiquées</p>
+					<p th:case="'JSON_READ_ERROR'">Le format sérialisé ne peut pas être lu avec les données indiquées</p>
+					<p th:case="'TABLE_NAME_INVALID'">
+						La table indiquée "<span th:text="${payload}"></span>" est référencée dans le dictionnaire mais n'existe pas
+						dans la base de donnée gérée. Aucune extraction de données ne peut être réalisée si le dictionnaire n'est pas valide.
+					  	Un script d'initialisation doit peut-être être lancé ?<br/>
+						<a href="#" th:href="@{/ui/prepare/cancel}" class="btn btn-secondary btn-sm">Abandonner l'opération en cours</a>
+					</p>
+					<p th:case="'TABLE_WRONG_REF'">
+						Une ou plusieurs tables référencées dans le fichier importé n'existent pas dans la base locale. Le dictionnaire doit 
+						être identique entre l'instance source et l'instance destination lors d'un export / import. 
+						Avez-vous importé la dernière version du dictionnaire ? <br/>
+						<a href="#" th:href="@{/ui/prepare/cancel}" class="btn btn-secondary btn-sm">Abandonner l'import en cours</a>
+					</p>
+					<p th:case="'DIC_NOT_REMOVABLE'">L'entrée de dictionnaire précisée ne peut pas être supprimée : il est utilisé dans l'index</p>
+					<p th:case="'DOMAIN_NOT_REMOVABLE'">Le domaine fonctionnel précisé ne peut pas être supprimé : il est utilisé dans l'index</p>
+					<p th:case="'VERIFIED_APPLY_NOT_FOUND'">
+						La suppression ou la modification d'une entrée de paramètrage à partir du diff à rollbacker ou à traiter après un 
+						import a échoué car l'entité identifiée n'existe pas / plus. La requête utilisée est 
+						<span class="query-display" th:text="${payload}">SELECT * FROM DUAL</span>
+					</p>
+					<p th:case="'DIC_KEY_NOT_UNIQ'">
+						La clé spécifiée "<span th:text="${payload}">MY_KEY</span>" pour l'entrée de dictionnaire n'est pas valide : les données n'y
+						sont actuellement pas uniques. Il est impératif que pour la clé utilisée, ses valeurs soient uniques.
+					</p>
+					<p th:case="'REFER_MISS_LINK'">
+						Une dépendance devrait être spécifiée pour la valeur <span th:text="${payload}">COLA</span> mais elle n'existe pas.
+						Est-ce que le dictionaire a été modifié pour cette table de paramètre ?
+					</p>
+					<p th:case="'PROJECT_MANDATORY'">
+						Un projet actif doit obligatoirement être sélectionné pour éditer les domaines ou les lots de modifications. 
+						Vérifiez que le projet actif est bien affiché dans le menu haut.
+					</p>
+					<p th:case="'PROJECT_NAME_EXIST'">
+						Il existe déjà un projet avec le nom "<span th:text="${payload}">projet</span>". Merci de choisir un nom unique pour chaque
+						nouveau projet
+					</p>
+					<p th:case="'VERSION_NOT_EXIST'">
+						Aucune version n'a été définie pour le dictionnaire actuel. La préparation d'un lot n'est pas possible en l'absence de version : 
+						créez une version pour le dictionnaire actuel <a href="./versions.html" th:href="@{/ui/versions}">ici</a> puis recommencez la préparation du lot.
+					</p>
+					<p th:case="'VERSION_NOT_UP_TO_DATE'">
+						La dernière version <span class="version-name" th:text="${payload}">0.1.2</span> n'embarque pas certaines opérations réalisées 
+						sur le dictionnaire. Pour pouvoir préparer un lot, la dernière version spécifiée doit être à jour avec toutes les modifications
+						du dictionnaire. Vous pouvez mettre à jour les versions pour le dictionnaire actuel 
+						<a href="./versions.html" th:href="@{/ui/versions}">ici</a>, puis relancer une préparation de lot.
+					</p>
+					<p th:case="'VERSION_NOT_IMPORTED'">
+						Un ou plusieurs lots importés sont associées à une version du dictionnaire non gérée. Le dictionnaire et le modèle de la base associée
+						doivent être obligatoirement mis à jour avant l'import des lots concernés<br/>
+						<a href="#" th:href="@{/ui/prepare/cancel}" class="btn btn-secondary btn-sm">Abandonner l'import en cours</a>
+					</p>
+					<p th:case="'VERSION_NOT_MODEL_ID'">
+						La ou les versions du dictionnaire importé sont associées à une version du modèle différente de celle de l'application actuellement 
+						gérée (<span th:text="${payload}">1.2.3</span>). Le dictionnaire doit être mis à jour <b>après</b> application des changements dans le modèle
+						de base de données de l'application gérée.
+					</p>
+					<p th:case="'ATTACHMENT_EXEC_ERROR'">
+						L'exécution d'un script importé a échoué. Le détail de l'erreur rencontrée : <span th:text="${payload}">1.2.3</span>.
+					</p>
+					<p th:case="*">Une erreur technique inconnue a été rencontrée</p>
+				</span>
+			</span>
+    <span th:if="!${code}">
+				<p>Une erreur technique inconnue a été rencontrée</p>
+			</span>
+</div>
+</body>
+</html>

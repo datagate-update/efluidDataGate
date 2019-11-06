@@ -1,0 +1,451 @@
+.container-fluid {
+    padding-left: 0!important;
+    padding-right: 0!important;
+}
+
+.add {
+    color:green;
+    font-weight: bold;
+}
+
+.remove {
+    color:red;
+    font-weight: bold;
+}
+
+.update {
+    color:blue;
+    font-weight: bold;
+}
+
+.conflict {
+    background-color: rgb(226, 185, 170);
+}
+
+.token-display {
+    padding: 2px 10px;
+    margin: O 2px;
+    background-color: #FAFAFA;
+    border: 1px #EEE solid;
+    font-weight: bold;
+    font-size: 16px;
+    color:brown;
+}
+
+.query-display {
+    display: block;
+    padding: 3px;
+    background-color: #FAFAFA;
+    border: 1px #EEE solid;
+    font-style: italic;
+    font-size: 14px;
+}
+
+.table-key {
+    font-weight: bold;
+    color: brown;
+}
+
+.table-used {
+    font-size: 13px;
+    background-color: #FAFAFA;
+	line-height: 30px;
+}
+
+.table-name {
+	font-weight: bold;
+	line-height: 30px;
+}
+
+.table-used .table-name {
+    font-size: 16px;
+	font-weight: bold;
+	color:brown;
+}
+
+select.select-table {
+	width: 350px;
+	display: inline;
+}
+
+select.select-column {
+	width: 250px;
+	display: inline;
+}
+
+.active-project {
+    font-size: 14px;
+    padding-right: 15px;
+}
+
+.active-project a {
+    font-decoration: none;
+    font-weight: bold;
+    color: Black !important;
+}
+
+.help {
+	display: block;
+    font-size: 14px;
+    padding: 5px 1px 15px 1px;
+}
+
+.remark {
+    font-style: italic;
+    font-size: 13px;
+}
+
+.important-remark {
+    font-style: italic;
+    color: red;
+    font-size: 13px;
+}
+
+.dictionary-content {
+    margin-top: 20px;
+    border: 1px solid #CCC;
+}
+
+.dictionary-content table {
+    margin-bottom: 0px;
+}
+
+.dictionary-summary {
+    padding: 5px;
+    background-color: #F4F4F4;
+}
+
+.domain-area {
+	padding-bottom: 20px;
+}
+
+.domain-summary {
+	background-color: #747474;
+	padding: 7px;
+	font-weight: bold;
+	margin-bottom: 0px !important;
+	color: #FFF;
+}
+
+.domain-content {
+	border: 1px solid #CCC;
+	padding: 0 10px 10px 10px;
+}
+
+.domain-buttons {
+	font-weight: bold;
+	padding-top: 6px;
+}
+
+.dictionary-summary .reducer, .domain-summary .reducer, .diff-remarks .reducer {
+    display: block;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    margin: 4px;
+}
+
+.reducer-open {
+	background-image: url("/plus.png");
+}
+
+.reducer-close {
+    background-image: url("/minus.png");
+}
+
+.history-state {
+	width: 25px;
+	vertical-align: middle !important;
+}
+
+.history-update {
+	background-image: url("/update.png");
+	width: 24px;
+	height: 18px;
+	display: block;
+}
+
+.history-rollback {
+    background-image: url("/rollback.png");
+	width: 24px;
+	height: 18px;
+	display: block;
+}
+
+.history-attachment {
+    background-image: url("/attachment.png");
+	width: 24px;
+	height: 18px;
+	display: block;
+}
+
+.inline-block {
+	display: inline-block!important;
+}
+
+.dictionary-summary .dictionary-name {
+	font-size: 17px;
+	color: #777;
+	font-weight: bold;
+}
+
+.dictionary-summary .dictionary-details {
+	font-size: 14px;
+	color: #777;
+	font-weight: bold;
+}
+
+.dictionary-diff-size {
+	font-size: 14px;
+	color: brown;
+	font-weight: bold;
+}
+
+.parameter-name {
+    font-weight: bold;
+}
+
+.version-name {
+	color: Maroon;
+    font-weight: bold;
+}
+
+.action-line {
+    font-weight: normal;
+    color: black;
+}
+
+.action-line .action-display {
+    font-weight: bold;
+}
+
+.action-line .similar-display {
+	color: rgba(128, 78, 136, 1);
+	font-weight: bold;
+}
+
+.action-line .change-display {
+    display: block;
+    padding: 3px;
+    border: 1px #EEE solid;
+    font-style: italic;
+    font-size: 14px;
+}
+
+.change-display-none {
+    display: block;
+    padding: 3px;
+    border: 1px #EEE solid;
+    font-style: italic;
+    font-size: 14px;
+}
+
+.change-title {
+	font-size: 13px;
+	font-weight: bold;
+}
+
+.action-line.add .action-display {
+    color:green;
+}
+
+.action-line.update .action-display {
+    color:orange;
+}
+
+.action-line.remove .action-display {
+    color:red;
+}
+
+.action-line.add .change-display {
+	background-color: rgb(243, 250, 243);
+}
+
+.action-line.update .change-display {
+	background-color: rgb(236, 229, 204);
+}
+
+.action-line.remove .change-display {
+	background-color: rgb(255, 220, 220);
+}
+
+.file-display {
+	padding-left: 10px;
+    font-size: 14px;
+}
+
+.file-display span {
+    font-style: italic;
+}
+
+.wizzard-warning {
+	width:100%;
+	background-color:#EEE;
+	font-size:16px;
+	font-weight:bold;
+}
+
+.w-bc {
+	display:block;
+	font-size: 19px;
+	color:#AAA;
+}
+
+.w-bc .active {
+	font-weight: bold;
+	color:#000;
+}
+
+.selecter {
+    display: inline-block;
+    margin-top: 0px;
+    margin-bottom: 0px;
+    width: 20px;
+    height: 20px;
+    line-height:15px;
+    cursor: pointer;
+}
+
+.selecter.selected {
+	background-image: url("/selected.png");
+}
+
+.selecter.unselected {
+    background-image: url("/unselected.png");
+}
+
+.btn-group .btn-head {
+    margin-top: 7px;
+    margin-bottom: 0px;
+	font-size: 15px;
+    line-height:15px;
+}
+
+.reducer.reducer-sm {
+    display: block;
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+    margin: 8px;
+	background-size: 14px 14px;
+}
+
+.change-details {
+	display: none;
+}
+
+
+/* COLOR PICKER - CUSTOM */
+
+.color-picker {
+	float: right;
+}
+
+.color-picker label {
+    margin-left: 4px;
+    margin-right: 10px;
+    font-weight: bold;
+    float: left;
+    font-size: 14px;
+}
+
+.color-picker label span {
+    margin-left: 4px;
+}
+
+/* THEMING - TEXT - BG SUPPORT */
+
+/* Grey (default) */
+.project-theme-txt-0 {
+    color:Grey !important;
+}
+
+.project-theme-bg-0 {
+	/* Color copied from default bootstrap bg */
+    background-color:#f8f9fa !important;
+}
+
+/* Blue */
+.project-theme-txt-1 {
+    color:Blue !important;
+}
+
+.project-theme-bg-1 {
+    background-color:SkyBlue !important;
+}
+
+/* Green */
+.project-theme-txt-2 {
+    color:Green !important;
+}
+
+.project-theme-bg-2 {
+    background-color:#A8FBA8 !important;
+}
+
+/* Yellow */
+.project-theme-txt-3 {
+    color:Gold !important;
+}
+
+.project-theme-bg-3 {
+    background-color:LemonChiffon !important;
+}
+
+/* Pink */
+.project-theme-txt-4 {
+    color:HotPink !important;
+}
+
+.project-theme-bg-4 {
+    background-color:MistyRose !important;
+}
+
+/* Purple */
+.project-theme-txt-5 {
+    color:Purple !important;
+}
+
+.project-theme-bg-5 {
+    background-color:Lavender !important;
+}
+
+.query-error {
+    padding: 3px;
+    font-style: italic;
+    font-size: 14px;
+}
+
+.diff-remarks {
+    padding: 3px;
+}
+
+.diff-remarks ul {
+    padding-top: 10px;
+}
+
+.file-runnable-com {
+    font-style: italic;
+    font-size: 16px;
+    font-weight: bold;
+    color: Purple;
+}
+
+.file-ico {    
+	margin-top: 5px;
+	display: block;
+    width: 18px;
+    height: 24px;
+    cursor: pointer;
+}
+
+.sql-comment {
+	color: DarkGreen;
+    font-style: italic;
+}
+
+.empty-list-message {
+    text-align: center;
+	color: Gray;
+    font-style: italic;
+}
