@@ -61,6 +61,10 @@ public class Commit implements Shared {
     @ManyToOne(optional = false)
     private Version version;
 
+	@ManyToMany
+	@JoinTable(name = "commits_transformers")
+	private List<TransformerSet> transformerSets = new ArrayList<>();
+
     @Transient
     private transient boolean refOnly = false;
 
@@ -262,6 +266,20 @@ public class Commit implements Shared {
     public void setAsRefOnly() {
         this.refOnly = true;
     }
+
+	/**
+	 * @return
+	 */
+	public List<TransformerSet> getTransformerSets() {
+		return this.transformerSets;
+	}
+
+	/**
+	 * @param transformerSets
+	 */
+	public void setTransformerSets(List<TransformerSet> transformerSets) {
+		this.transformerSets = transformerSets;
+	}
 
     /**
      * @return

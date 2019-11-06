@@ -49,7 +49,7 @@ public class EfluidRegionTransformConfig {
 	 * @since v0.0.8
 	 * @version 1
 	 */
-	@ConfigurationProperties(prefix = "param-efluid.efluid-region-transform")
+	@ConfigurationProperties(prefix = "datagate-efluid.efluid-region-transform")
 	public static class EfluidRegionTransformProperties {
 
 		private String codeTable;

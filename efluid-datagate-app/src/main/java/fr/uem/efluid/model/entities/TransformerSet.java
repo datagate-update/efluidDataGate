@@ -152,9 +152,9 @@ public class TransformerSet implements Shared {
 	public void deserialize(String raw) {
 
 		SharedOutputInputUtils.fromJson(raw)
-				.applyUUID("uid", u -> setUuid(u))
+				.applyUUID("uid", this::setUuid)
 				.applyUUID("src", u -> setSource(new TransformerSource(u)))
-				.applyString("has", h -> setHash(h))
+				.applyString("has", this::setHash)
 				.applyString("ets", i -> {
 					// Empty => Empty idx list
 					if ("".equals(i)) {

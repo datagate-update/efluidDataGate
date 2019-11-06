@@ -201,12 +201,12 @@ public class TransformerSource extends ExportAwareTransformerSource<Project> {
 	public void deserialize(String raw) {
 
 		SharedOutputInputUtils.fromJson(raw)
-				.applyUUID("uid", v -> setUuid(v))
-				.applyLdt("cre", v -> setCreatedTime(v))
-				.applyLdt("upd", v -> setUpdatedTime(v))
-				.applyString("tab", v -> setTableName(v))
-				.applyString("cla", v -> setTransformerClassName(v))
-				.applyB64String("cfg", v -> setTransformerConfig(v))
+				.applyUUID("uid", this::setUuid)
+				.applyLdt("cre", this::setCreatedTime)
+				.applyLdt("upd", this::setUpdatedTime)
+				.applyString("tab", this::setTableName)
+				.applyString("cla", this::setTransformerClassName)
+				.applyB64String("cfg", this::setTransformerConfig)
 				.applyUUID("pro", v -> setProject(new Project(v)));
 	}
 

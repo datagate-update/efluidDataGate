@@ -1,13 +1,24 @@
 package fr.uem.efluid.services;
 
-import fr.uem.efluid.model.DiffLine;
-import fr.uem.efluid.model.entities.*;
-import fr.uem.efluid.model.repositories.*;
-import fr.uem.efluid.services.types.*;
-import fr.uem.efluid.tools.AttachmentProcessor;
-import fr.uem.efluid.utils.ApplicationException;
-import fr.uem.efluid.utils.Associate;
-import fr.uem.efluid.utils.FormatUtils;
+import static fr.uem.efluid.utils.ErrorType.COMMIT_EXISTS;
+import static fr.uem.efluid.utils.ErrorType.COMMIT_IMPORT_INVALID;
+import static fr.uem.efluid.utils.ErrorType.VERSION_NOT_IMPORTED;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,12 +26,44 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import static fr.uem.efluid.utils.ErrorType.*;
+import fr.uem.efluid.model.DiffLine;
+import fr.uem.efluid.model.entities.Attachment;
+import fr.uem.efluid.model.entities.Commit;
+import fr.uem.efluid.model.entities.CommitState;
+import fr.uem.efluid.model.entities.DictionaryEntry;
+import fr.uem.efluid.model.entities.IndexEntry;
+import fr.uem.efluid.model.entities.LobProperty;
+import fr.uem.efluid.model.entities.Project;
+import fr.uem.efluid.model.entities.User;
+import fr.uem.efluid.model.entities.Version;
+import fr.uem.efluid.model.repositories.AttachmentRepository;
+import fr.uem.efluid.model.repositories.CommitRepository;
+import fr.uem.efluid.model.repositories.DictionaryRepository;
+import fr.uem.efluid.model.repositories.FeatureManager;
+import fr.uem.efluid.model.repositories.FunctionalDomainRepository;
+import fr.uem.efluid.model.repositories.IndexRepository;
+import fr.uem.efluid.model.repositories.LobPropertyRepository;
+import fr.uem.efluid.model.repositories.VersionRepository;
+import fr.uem.efluid.services.types.AttachmentLine;
+import fr.uem.efluid.services.types.AttachmentPackage;
+import fr.uem.efluid.services.types.CommitDetails;
+import fr.uem.efluid.services.types.CommitEditData;
+import fr.uem.efluid.services.types.CommitPackage;
+import fr.uem.efluid.services.types.DiffDisplay;
+import fr.uem.efluid.services.types.ExportFile;
+import fr.uem.efluid.services.types.ExportImportResult;
+import fr.uem.efluid.services.types.LobPropertyPackage;
+import fr.uem.efluid.services.types.MergePreparedDiff;
+import fr.uem.efluid.services.types.PilotedCommitPreparation;
+import fr.uem.efluid.services.types.PreparedIndexEntry;
+import fr.uem.efluid.services.types.PreparedMergeIndexEntry;
+import fr.uem.efluid.services.types.RollbackLine;
+import fr.uem.efluid.services.types.SharedPackage;
+import fr.uem.efluid.tools.AttachmentProcessor;
+import fr.uem.efluid.tools.ValueApplyTransformer;
+import fr.uem.efluid.utils.ApplicationException;
+import fr.uem.efluid.utils.Associate;
+import fr.uem.efluid.utils.FormatUtils;
 
 /**
  * <p>
@@ -85,6 +128,11 @@ public class CommitService extends AbstractApplicationService {
     @Autowired
     private AttachmentProcessor.Provider attachProcs;
 
+	@Autowired
+	private FeatureManager features;
+
+	@Autowired(required = false)
+	private ValueApplyTransformer transformer;
 
     /**
      * <p>
@@ -411,6 +459,27 @@ public class CommitService extends AbstractApplicationService {
         return commit.getUuid();
     }
 
+	/**
+	 * <p>
+	 * Process payload transform if a compliant transformer is defined at import level
+	 * </p>
+	 *
+	 * @param commitToProcess
+	 */
+	private void transformCommitToProcessOnImport(List<Commit> commitToProcess) {
+
+		// Update payload on all concerned index entries
+		if (commitToProcess.size() > 0) {
+			commitToProcess.stream()
+					.flatMap(c -> c.getIndex().stream())
+					.filter(i -> this.transformer.isApplyOnDictionaryEntry(i.getDictionaryEntry()))
+					.forEach(i -> {
+						// Update payload with transformer
+						i.setPayload(this.transformer.transformPayload(i.getDictionaryEntry(), i.getPayload()));
+					});
+		}
+	}
+
     /**
      * <p>
      * Reserved for launch from <tt>PilotableCommitPreparationService</tt>
@@ -511,6 +580,11 @@ public class CommitService extends AbstractApplicationService {
                 lobsPckg.getContent().stream()
                         .distinct()
                         .collect(Collectors.toConcurrentMap(LobProperty::getHash, LobProperty::getData)));
+
+		// Transform "toProcess" if required
+		if (this.transformer != null) {
+			transformCommitToProcessOnImport(toProcess);
+		}
 
         // Create the future merge commit info
         currentPreparation.setCommitData(new CommitEditData());

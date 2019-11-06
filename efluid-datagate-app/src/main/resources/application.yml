@@ -72,7 +72,15 @@ datagate-efluid:
            - com.efluid.TestTransformer
         direct-transformers:
            - com.efluid.UpperCaseValueApplyTranformer   
-        
+
+    efluid-region-transform:
+        codeTable:
+        private String codeFromColumn;
+
+        private String codeToColumn;
+
+        private List<String> applyTo;
+
     merge:
         use-new-process: true
         rule-file: classpath:merge-resolution-rules.json

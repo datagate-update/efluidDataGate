@@ -90,7 +90,7 @@ public class TransformerSetEntry {
 	 */
 	void deserialize(String raw) {
 		SharedOutputInputUtils.fromJson(raw)
-				.applyString("pay", p -> setPayload(p));
+				.applyString("pay", this::setPayload);
 	}
 
 	/**

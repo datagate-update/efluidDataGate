@@ -23,85 +23,85 @@ import fr.uem.efluid.utils.Associate;
  * Example of substitute process for Efluid when a transformer need to change values in
  * regionalized context
  * </p>
- * 
+ *
  * @author elecomte
- * @since v0.0.8
  * @version 1
+ * @since v0.0.8
  */
 public class EfluidRegionValueApplyTranformer extends SwitchedValueApplyTransformer {
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(EfluidRegionValueApplyTranformer.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(EfluidRegionValueApplyTranformer.class);
 
-	private final String fromCol;
-	private final String toCol;
-	private final String selTable;
+    private final String fromCol;
+    private final String toCol;
+    private final String selTable;
 
-	private static final String REGION_CHANGE_QUERY = "select %s, %s from %s";
+    private static final String REGION_CHANGE_QUERY = "select %s, %s from %s";
 
-	@Autowired
-	private JdbcTemplate jdbc;
+    @Autowired
+    private JdbcTemplate jdbc;
 
-	private Map<String, String> substitute;
+    private Map<String, String> substitute;
 
-	public EfluidRegionValueApplyTranformer(
-			String fromCol,
-			String toCol,
-			String selTable) {
+    public EfluidRegionValueApplyTranformer(
+            String fromCol,
+            String toCol,
+            String selTable) {
 
-		super();
+        super();
 
-		this.fromCol = fromCol;
-		this.toCol = toCol;
-		this.selTable = selTable;
-	}
+        this.fromCol = fromCol;
+        this.toCol = toCol;
+        this.selTable = selTable;
+    }
 
-	@Override
-	protected String transformCompliantValue(DictionaryEntry dict, Value value) {
-		String valueToProcess = value.getValueAsString();
+    @Override
+    protected String transformCompliantValue(DictionaryEntry dict, Value value) {
+        String valueToProcess = value.getValueAsString();
 
-		for (String code : this.substitute.keySet()) {
-			if (valueToProcess.contains(code)) {
-				valueToProcess = valueToProcess.replaceAll(code, this.substitute.get(code));
-			}
-		}
+        for (String code : this.substitute.keySet()) {
+            if (valueToProcess.contains(code)) {
+                valueToProcess = valueToProcess.replaceAll(code, this.substitute.get(code));
+            }
+        }
 
-		return valueToProcess;
-	}
+        return valueToProcess;
+    }
 
-	@PostConstruct
-	public void preloadRegionChanges() {
+    @PostConstruct
+    public void preloadRegionChanges() {
 
-		String query = String.format(REGION_CHANGE_QUERY, this.fromCol, this.toCol, this.selTable);
+        String query = String.format(REGION_CHANGE_QUERY, this.fromCol, this.toCol, this.selTable);
 
-		// Extract all and keep as this for further needs
-		this.substitute = this.jdbc.query(query, new CodeChangeRowMapper(this.fromCol, this.toCol)).stream()
-				.collect(Collectors.toMap(Associate::getOne, Associate::getTwo));
+        // Extract all and keep as this for further needs
+        this.substitute = this.jdbc.query(query, new CodeChangeRowMapper(this.fromCol, this.toCol)).stream()
+                .collect(Collectors.toMap(Associate::getOne, Associate::getTwo));
 
-		LOGGER.info("Value transformer for efluid initialized with {} code substitution to apply on "
-				+ "{} tables and a total of {} column rules.",
-				Integer.valueOf(this.substitute.size()), Integer.valueOf(this.tableApplies.size()),
-				Long.valueOf(this.valueApplies.values().stream().flatMap(Collection::stream).count()));
-	}
+        LOGGER.info("Value transformer for efluid initialized with {} code substitution to apply on "
+                        + "{} tables and a total of {} column rules.",
+                this.substitute.size(), this.tableApplies.size(),
+                this.valueApplies.values().stream().mapToLong(Collection::size).sum());
+    }
 
-	/**
-	 * @author elecomte
-	 * @since v0.0.8
-	 * @version 1
-	 */
-	private static class CodeChangeRowMapper implements RowMapper<Associate<String, String>> {
+    /**
+     * @author elecomte
+     * @version 1
+     * @since v0.0.8
+     */
+    private static class CodeChangeRowMapper implements RowMapper<Associate<String, String>> {
 
-		private final String fromCol;
-		private final String toCol;
+        private final String fromCol;
+        private final String toCol;
 
-		public CodeChangeRowMapper(String fromCol, String toCol) {
-			super();
-			this.fromCol = fromCol;
-			this.toCol = toCol;
-		}
+        public CodeChangeRowMapper(String fromCol, String toCol) {
+            super();
+            this.fromCol = fromCol;
+            this.toCol = toCol;
+        }
 
-		@Override
-		public Associate<String, String> mapRow(ResultSet rs, int rowNum) throws SQLException {
-			return Associate.of(rs.getString(this.fromCol), rs.getString(this.toCol));
-		}
-	}
+        @Override
+        public Associate<String, String> mapRow(ResultSet rs, int rowNum) throws SQLException {
+            return Associate.of(rs.getString(this.fromCol), rs.getString(this.toCol));
+        }
+    }
 }
