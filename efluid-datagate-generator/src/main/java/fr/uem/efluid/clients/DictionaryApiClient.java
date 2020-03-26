@@ -32,7 +32,8 @@ public class DictionaryApiClient implements DictionaryApi {
     private final RestTemplate template;
 
     /**
-     *
+     * @param uri associated entry point
+     * @param token user technical token
      */
     public DictionaryApiClient(String uri, String token) {
         this.uri = uri;
@@ -43,8 +44,8 @@ public class DictionaryApiClient implements DictionaryApi {
 
     /**
      * @param file <tt>MultipartFile</tt> to process
-     * @return
-     * @throws ApplicationException
+     * @return package export to upload
+     * @throws ApplicationException on received error for DataGate instance
      */
     @Override
     public CreatedDictionaryView uploadDictionaryPackage(MultipartFile file) throws ApplicationException {
@@ -68,8 +69,8 @@ public class DictionaryApiClient implements DictionaryApi {
     }
 
     /**
-     * @param versionName
-     * @throws ApplicationException
+     * @param versionName init version
+     * @throws ApplicationException on received error for DataGate instance
      */
     @Override
     public void setVersion(String versionName) throws ApplicationException {
@@ -84,8 +85,8 @@ public class DictionaryApiClient implements DictionaryApi {
     }
 
     /**
-     * @return
-     * @throws ApplicationException
+     * @return last active version
+     * @throws ApplicationException on received error for DataGate instance
      */
     @Override
     public VersionView getLastVersion() throws ApplicationException {
@@ -99,8 +100,8 @@ public class DictionaryApiClient implements DictionaryApi {
     }
 
     /**
-     * @return
-     * @throws ApplicationException
+     * @return existing versions
+     * @throws ApplicationException on received error for DataGate instance
      */
     @Override
     public List<VersionView> getVersions() throws ApplicationException {
