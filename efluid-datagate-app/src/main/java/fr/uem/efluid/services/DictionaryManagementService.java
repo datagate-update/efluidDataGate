@@ -9,6 +9,7 @@ import fr.uem.efluid.model.repositories.ManagedModelDescriptionRepository.Identi
 import fr.uem.efluid.services.types.*;
 import fr.uem.efluid.services.types.DictionaryEntryEditData.ColumnEditData;
 import fr.uem.efluid.tools.ManagedQueriesGenerator;
+import fr.uem.efluid.tools.VersionContentChangesGenerator;
 import fr.uem.efluid.utils.ApplicationException;
 import fr.uem.efluid.utils.SelectClauseGenerator;
 import org.slf4j.Logger;
@@ -72,7 +73,7 @@ import static fr.uem.efluid.utils.ErrorType.*;
 @Transactional
 public class DictionaryManagementService extends AbstractApplicationService {
 
-    private static final VersionData NOT_SET_VERSION = new VersionData("NOT SET", "", null, null, false);
+    private static final VersionData NOT_SET_VERSION = new VersionData("NOT SET", "", null, null, true, false, false);
 
     private static final String DEDUPLICATED_DOMAINS = "deduplicated-domains";
 
@@ -120,30 +121,41 @@ public class DictionaryManagementService extends AbstractApplicationService {
     @Autowired
     private FeatureManager features;
 
+    @Autowired
+    private VersionContentChangesGenerator changesGenerator;
+
     /**
      * @param name
      */
-    public void setCurrentVersion(String name) {
+    public void setCurrentVersion(final String name) {
 
         this.projectService.assertCurrentUserHasSelectedProject();
         Project project = this.projectService.getCurrentSelectedProjectEntity();
 
-        // Search by name
-        Version version = this.versions.findByNameAndProject(name, project);
+        // Behavior based on version feature
+        final boolean useModelId = this.features.isEnabled(Feature.USE_MODEL_ID_AS_VERSION_NAME);
 
         // Search ref identifier if enabled
         String modelId = this.modelDescs.getCurrentModelIdentifier();
 
+        // Must check if model id is compliant
+        assertCanCreateVersionFromModelId(useModelId, modelId);
+
+        final String fixedName = useModelId ? modelId : name;
+
+        // Search by name
+        Version version = this.versions.findByNameAndProject(fixedName, project);
+
         // Create
         if (version == null) {
-            LOGGER.info("Create version {} in current project", name);
+            LOGGER.info("Create version {} in current project", fixedName);
             version = new Version();
             version.setUuid(UUID.randomUUID());
-            version.setName(name);
+            version.setName(fixedName);
             version.setCreatedTime(LocalDateTime.now());
             version.setProject(project);
         } else {
-            LOGGER.info("Update version {} in current project", name);
+            LOGGER.info("Update version {} in current project", fixedName);
         }
 
         // Always init
@@ -154,6 +166,9 @@ public class DictionaryManagementService extends AbstractApplicationService {
             version.setModelIdentity(modelId);
         }
 
+        // And finally, extract the content for validity
+        completeVersionContents(version);
+
         this.versions.save(version);
     }
 
@@ -162,17 +177,12 @@ public class DictionaryManagementService extends AbstractApplicationService {
      */
     public VersionData getLastVersion() {
 
-        this.projectService.assertCurrentUserHasSelectedProject();
-        Project project = this.projectService.getCurrentSelectedProjectEntity();
+        Version last = getLastUpdatedVersion();
 
-        if(project != null) {
-            Version last = this.versions.getLastVersionForProject(project);
+        if (last != null) {
 
-            if(last != null) {
-
-                // Must have no commit for version
-                return VersionData.fromEntity(last, this.commits.countCommitsForVersion(last.getUuid()) == 0);
-            }
+            // Must have no commit for version
+            return VersionData.fromEntity(last, true, this.commits.countCommitsForVersion(last.getUuid()) == 0);
         }
 
         return NOT_SET_VERSION;
@@ -192,6 +202,33 @@ public class DictionaryManagementService extends AbstractApplicationService {
     /**
      * @return
      */
+    public boolean isVersionCanCreate() {
+
+        this.projectService.assertCurrentUserHasSelectedProject();
+        Project project = this.projectService.getCurrentSelectedProjectEntity();
+
+        Version last = this.versions.getLastVersionForProject(project);
+
+        // Can always init
+        if (last == null) {
+            return true;
+        }
+
+        // If not based on model Id, can always create
+        if (!this.features.isEnabled(Feature.USE_MODEL_ID_AS_VERSION_NAME)) {
+            return true;
+        }
+
+        // Check not only for last but for all existing versions (to avoid duplicates)
+        Version existing = this.versions.findByNameAndProject(this.modelDescs.getCurrentModelIdentifier(), project);
+
+        // Cannot create new if model id is not updated from any existing version
+        return existing == null;
+    }
+
+    /**
+     * @return
+     */
     public List<VersionData> getAvailableVersions() {
 
         this.projectService.assertCurrentUserHasSelectedProject();
@@ -200,6 +237,7 @@ public class DictionaryManagementService extends AbstractApplicationService {
 
         return this.versions.findByProject(project).stream()
                 .map(v -> getCompletedVersion(v, last))
+                .sorted(Comparator.comparing(VersionData::getUpdatedTime))
                 .collect(Collectors.toList());
     }
 
@@ -297,6 +335,49 @@ public class DictionaryManagementService extends AbstractApplicationService {
     }
 
     /**
+     * Process a full compare between a selected version and the current last version for a dictionnary update following
+     *
+     * @param toCompareName identified version to compare, "left"
+     * @return compare result
+     */
+    public VersionCompare compareVersionWithLast(String toCompareName) {
+
+        Version last = getLastUpdatedVersion();
+
+        if (last == null) {
+            throw new ApplicationException(VERSION_NOT_EXIST, "No version specified yet for application");
+        }
+
+        return compareVersions(toCompareName, last.getName());
+    }
+
+    /**
+     * Process a full compare between 2 selected versions for a dictionnary update following
+     *
+     * @param oneName identified version to compare, "left"
+     * @param twoName identified version to compare, "right"
+     * @return compare result
+     */
+    public VersionCompare compareVersions(String oneName, String twoName) {
+
+        // Requires project
+        this.projectService.assertCurrentUserHasSelectedProject();
+        Project project = this.projectService.getCurrentSelectedProjectEntity();
+
+        Version one = this.versions.findByNameAndProject(oneName, project);
+        Version two = this.versions.findByNameAndProject(twoName, project);
+
+        if (one != null && two != null) {
+            return new VersionCompare(
+                    VersionData.fromEntity(one, false, false),
+                    VersionData.fromEntity(two, true, false),
+                    this.changesGenerator.generateChanges(one, two));
+        } else {
+            throw new ApplicationException(VERSION_NOT_EXIST, "Selected version(s) doesn't exist (" + oneName + " - " + twoName + ")");
+        }
+    }
+
+    /**
      * As summaries, for display or first level edit
      *
      * @return
@@ -316,7 +397,10 @@ public class DictionaryManagementService extends AbstractApplicationService {
 
         return this.dictionary.findByDomainProject(project).stream()
                 .map(e -> DictionaryEntrySummary.fromEntity(e,
-                        this.queryGenerator.producesSelectParameterQuery(e, this.links.findByDictionaryEntry(e), allDicts)))
+                        this.queryGenerator.producesSelectParameterQuery(
+                                e,
+                                this.links.findByDictionaryEntry(e),
+                                allDicts)))
                 .peek(d -> d.setCanDelete(!usedIds.contains(d.getUuid())))
                 .sorted()
                 .collect(Collectors.toList());
@@ -495,6 +579,46 @@ public class DictionaryManagementService extends AbstractApplicationService {
 
         // And refresh dict Entry
         this.dictionary.save(entry);
+    }
+
+    /**
+     * Force generate the full query : used for editing
+     *
+     * @param editData
+     */
+    public String generateQuery(DictionaryEntryEditData editData) {
+
+        this.projectService.assertCurrentUserHasSelectedProject();
+        Project project = this.projectService.getCurrentSelectedProjectEntity();
+
+        // For link building, need other dicts
+        Map<String, DictionaryEntry> allDicts = this.dictionary.findAllMappedByTableName(project);
+
+        // Will use a "temp" simulated dict entry
+        DictionaryEntry entry = new DictionaryEntry();
+
+        entry.setTableName(editData.getTable());
+
+        // Specified keys from columns
+        List<ColumnEditData> keys = editData.getColumns().stream().filter(ColumnEditData::isKey).sorted().collect(Collectors.toList());
+
+        // Other common edited properties
+        entry.setParameterName(editData.getName());
+        entry.setWhereClause(editData.getWhere());
+
+        // Apply keys, with support for composite keys
+        applyEditedKeys(entry, keys, false);
+
+        // Simulated links
+        Collection<TableLink> links = prepareLinksFromEditData(entry, editData.getColumns()).values();
+
+        // Now update select clause using validated tableLinks
+        entry.setSelectClause(columnsAsSelectClause(editData.getColumns(),
+                links,
+                Collections.emptyList(),
+                this.dictionary.findAllMappedByTableName(project)));
+
+        return this.queryGenerator.producesSelectParameterQuery(entry, links, allDicts);
     }
 
     /**
@@ -797,6 +921,13 @@ public class DictionaryManagementService extends AbstractApplicationService {
             deduplicateDomains(importedDomains, deduplicatedDomainsCount);
         }
 
+        // Finally update last version after import
+        Version last = getLastUpdatedVersion();
+        if (last != null) {
+            completeVersionContents(last);
+            this.versions.save(last); // Refresh
+        }
+
         // Details on imported counts (add vs updated items)
         if (importedProjects.size() > 0) {
             result.addCount(ProjectExportPackage.PROJECTS_EXPORT, newProjsCount.get(),
@@ -889,7 +1020,7 @@ public class DictionaryManagementService extends AbstractApplicationService {
         // No commits for it
         boolean isUpdatable = this.commits.countCommitsForVersion(lastProjectVersion.getUuid()) == 0;
 
-        return VersionData.fromEntity(version, isLastVersion && isUpdatable);
+        return VersionData.fromEntity(version, isLastVersion, isLastVersion && isUpdatable);
     }
 
     /**
@@ -1236,11 +1367,7 @@ public class DictionaryManagementService extends AbstractApplicationService {
      * @param entry
      * @param cols
      */
-    private void updateLinks(DictionaryEntry entry, List<ColumnEditData> cols) {
-
-        // For final save
-        Collection<TableLink> updatedLinks = new ArrayList<>();
-        Collection<TableLink> createdLinks = new ArrayList<>();
+    private Map<String, TableLink> prepareLinksFromEditData(DictionaryEntry entry, List<ColumnEditData> cols) {
 
         Map<String, TableLink> editedLinksByTableTo = new HashMap<>();
 
@@ -1271,6 +1398,23 @@ public class DictionaryManagementService extends AbstractApplicationService {
                 }
             }
         }
+
+        return editedLinksByTableTo;
+    }
+
+    /**
+     * Update / Create / delete tablelink regarding specified FK in columnEditDatas
+     *
+     * @param entry
+     * @param cols
+     */
+    private void updateLinks(DictionaryEntry entry, List<ColumnEditData> cols) {
+
+        // For final save
+        Collection<TableLink> updatedLinks = new ArrayList<>();
+        Collection<TableLink> createdLinks = new ArrayList<>();
+
+        Map<String, TableLink> editedLinksByTableTo = prepareLinksFromEditData(entry, cols);
 
         // Get existing to update / remove
         Map<String, TableLink> existingLinksByTableTo = this.links.findByDictionaryEntry(entry).stream().distinct()
@@ -1333,6 +1477,21 @@ public class DictionaryManagementService extends AbstractApplicationService {
     }
 
     /**
+     * @return
+     */
+    public Version getLastUpdatedVersion() {
+
+        this.projectService.assertCurrentUserHasSelectedProject();
+        Project project = this.projectService.getCurrentSelectedProjectEntity();
+
+        if (project != null) {
+            return this.versions.getLastVersionForProject(project);
+        }
+
+        return null;
+    }
+
+    /**
      * @param tableName
      * @return
      */
@@ -1342,6 +1501,35 @@ public class DictionaryManagementService extends AbstractApplicationService {
                 .filter(t -> t.getName().equalsIgnoreCase(tableName))
                 .findFirst()
                 .orElse(TableDescription.MISSING);
+    }
+
+    /**
+     * Extract and apply the content for an updated version (everything present when the version is updated)
+     *
+     * @param version
+     */
+    private void completeVersionContents(Version version) {
+
+        this.projectService.assertCurrentUserHasSelectedProject();
+        Project project = this.projectService.getCurrentSelectedProjectEntity();
+
+        // All contents
+        Map<String, List<UUID>> contentUuids = this.versions.findLastVersionContents(project, version.getUpdatedTime());
+
+        // Separated extracts
+        List<UUID> domsUuids = contentUuids.get(VersionRepository.MAPPED_TYPE_DOMAIN);
+        List<UUID> dictUuids = contentUuids.get(VersionRepository.MAPPED_TYPE_DICT);
+        List<UUID> linksUuids = contentUuids.get(VersionRepository.MAPPED_TYPE_LINK);
+        List<UUID> mappingsUuids = contentUuids.get(VersionRepository.MAPPED_TYPE_MAPPING);
+
+        // Apply all contents (externalized for testability)
+        this.changesGenerator.completeVersionContentForChangeGeneration(
+                version,
+                domsUuids != null ? this.domains.findAllById(domsUuids) : Collections.emptyList(),
+                dictUuids != null ? this.dictionary.findAllById(dictUuids) : Collections.emptyList(),
+                linksUuids != null ? this.links.findAllById(linksUuids) : Collections.emptyList(),
+                mappingsUuids != null ? this.mappings.findAllById(mappingsUuids) : Collections.emptyList()
+        );
     }
 
     /**
@@ -1397,7 +1585,7 @@ public class DictionaryManagementService extends AbstractApplicationService {
      * @param columns
      * @return
      */
-    private String columnsAsSelectClause(List<ColumnEditData> columns, List<TableLink> tabLinks, List<TableMapping> tabMappings,
+    private String columnsAsSelectClause(List<ColumnEditData> columns, Collection<TableLink> tabLinks, Collection<TableMapping> tabMappings,
                                          Map<String, DictionaryEntry> allEntries) {
         return this.queryGenerator.mergeSelectClause(
                 columns.stream().filter(ColumnEditData::isSelected).map(ColumnEditData::getName).collect(Collectors.toList()),
@@ -1467,6 +1655,19 @@ public class DictionaryManagementService extends AbstractApplicationService {
 
         if (keys.size() > 5) {
             throw new ApplicationException(DIC_TOO_MANY_KEYS, "Too much selected columns for composite key definition");
+        }
+    }
+
+    /**
+     * <p>If we have to use the model ID as version name, but their is no version ID, then We cant !</p>
+     *
+     * @param useModelIdAsVersionName current feature status on "use model id as version name"
+     * @param currentModelId          current model id extracted from available identifier
+     */
+    private static void assertCanCreateVersionFromModelId(boolean useModelIdAsVersionName, String currentModelId) {
+
+        if (useModelIdAsVersionName && currentModelId == null) {
+            throw new ApplicationException(VERSION_NOT_MODEL_ID, "Cannot use the model ID as version name if no model ID can be found");
         }
     }
 

@@ -1,10 +1,6 @@
 package fr.uem.efluid.utils;
 
-import static fr.uem.efluid.utils.ErrorType.DATA_READ_ERROR;
-import static fr.uem.efluid.utils.ErrorType.DATA_WRITE_ERROR;
-import static fr.uem.efluid.utils.ErrorType.JSON_READ_ERROR;
-import static fr.uem.efluid.utils.ErrorType.JSON_WRITE_ERROR;
-import static fr.uem.efluid.utils.ErrorType.TMP_ERROR;
+import static fr.uem.efluid.utils.ErrorType.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,7 +12,6 @@ import java.nio.file.StandardOpenOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -29,24 +24,21 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
-import fr.uem.efluid.model.Shared;
 import fr.uem.efluid.utils.json.LocalDateModule;
 import fr.uem.efluid.utils.json.LocalDateTimeModule;
 
 /**
  * <p>
  * Helper with a very basic data model for processing input and output of <tt>Shared</tt>
- * as basic String values.
+ * as basic String values
  * </p>
  * <p>
- * Input/output process can be seen as similare to a serialization process. This utils
- * provides builders / chained helpers to process serialization and deserialization of all
- * the various type of values met in shared entities
+ * Input/output process can be seen as similare to a serialization process
  * </p>
  * 
  * @author elecomte
  * @since v0.0.1
- * @version 3
+ * @version 2
  */
 public class SharedOutputInputUtils {
 
@@ -68,46 +60,46 @@ public class SharedOutputInputUtils {
 
 	private static final DateTimeFormatter DATE_TIME_FORMATER = DateTimeFormatter.ofPattern(FormatUtils.DATE_TIME_FORMAT);
 
-	/**
-	 * <p>
-	 * For serialization, we some time have to manage a combination of 2 values instead of
-	 * 1 single string value. This method merge values with a common reversible separator
-	 * </p>
-	 * 
-	 * @param valueOne
-	 * @param valueTwo
-	 * @return
+    /**
+     * <p>
+     * For serialization, we some time have to manage a combination of 2 values instead of
+     * 1 single string value. This method merge values with a common reversible separator
+     * </p>
+     *
+     * @param valueOne for consistent merge in serialization - 1st part
+     * @param valueTwo for consistent merge in serialization - 2nd part
+     * @return merged serialized content
 	 */
 	public static String mergeValues(String valueOne, String valueTwo) {
 		return valueOne + MERGER + valueTwo;
 	}
 
-	/**
-	 * <p>
-	 * Revert {@link #mergeValues(String, String)}
-	 * </p>
-	 * 
-	 * @param merged
-	 * @return
-	 */
-	public static String[] splitValues(String merged) {
-		return merged.split(MERGER);
-	}
+    /**
+     * <p>
+     * Revert {@link #mergeValues(String, String)}
+     * </p>
+     *
+     * @param merged serialized content merged with consistent process
+     * @return split result
+     */
+    public static String[] splitValues(String merged) {
+        return merged.split(MERGER);
+    }
 
-	/**
-	 * @return
-	 */
-	public static JsonPropertiesWriter newJson() {
-		return new JsonPropertiesWriter();
-	}
+    /**
+     * @return builder for serialization export
+     */
+    public static JsonPropertiesWriter newJson() {
+        return new JsonPropertiesWriter();
+    }
 
-	/**
-	 * @param raw
-	 * @return
-	 */
-	public static OutputJsonPropertiesReader fromJson(String raw) {
-		return new OutputJsonPropertiesReader(raw);
-	}
+    /**
+     * @param raw serialized content for consistent model
+     * @return builder for read support on serialization content
+     */
+    public static OutputJsonPropertiesReader fromJson(String raw) {
+        return new OutputJsonPropertiesReader(raw);
+    }
 
 	/**
 	 * <p>
@@ -255,14 +247,14 @@ public class SharedOutputInputUtils {
 		return objectMapper;
 	}
 
-	/**
-	 * Chained writter
-	 * 
-	 * @author elecomte
-	 * @since v0.0.1
-	 * @version 2
-	 */
-	public static class JsonPropertiesWriter {
+    /**
+     * Chained writter
+     *
+     * @author elecomte
+     * @version 2
+     * @since v0.0.1
+     */
+    public static class JsonPropertiesWriter {
 
 		private final Map<String, Object> properties = new HashMap<>();
 
@@ -280,7 +272,7 @@ public class SharedOutputInputUtils {
 		 * <p>
 		 * Will inline UUIDs in one value
 		 * </p>
-		 * 
+		 *
 		 * @param key
 		 * @param items
 		 * @return
@@ -432,7 +424,7 @@ public class SharedOutputInputUtils {
 		 * <p>
 		 * Process inlined list of UUIDs to get the corresponding UUID objects
 		 * </p>
-		 * 
+		 *
 		 * @param name
 		 * @return
 		 */
@@ -503,7 +495,7 @@ public class SharedOutputInputUtils {
 		 * If present, get corresponding property with inlined UUIDs, extract them as a
 		 * list of UUIDs and process given consumer to init associated entities
 		 * </p>
-		 * 
+		 *
 		 * @param name
 		 * @param apply
 		 * @return
