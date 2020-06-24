@@ -1,6 +1,7 @@
 package fr.uem.efluid.tools;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import fr.uem.efluid.ColumnType;
 import fr.uem.efluid.model.entities.DictionaryEntry;
 import fr.uem.efluid.services.types.PreparedIndexEntry;
 import fr.uem.efluid.services.types.Value;
@@ -11,10 +12,11 @@ import org.springframework.util.StringUtils;
 
 import java.util.*;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
+import static fr.uem.efluid.tools.Transformer.TransformerRunner.transformedValue;
+import static java.util.regex.Pattern.compile;
 import static java.util.stream.Collectors.*;
+import static org.springframework.util.StringUtils.isEmpty;
 
 /**
  * Transformer for Efluid Audit data update at merge
@@ -26,7 +28,7 @@ import static java.util.stream.Collectors.*;
  * </pre>
  *
  * @author elecomte
- * @version 1
+ * @version 2
  * @since v1.2.0
  */
 @Component
@@ -34,9 +36,12 @@ public class EfluidAuditDataTransformer extends Transformer<EfluidAuditDataTrans
 
     public static final String CURRENT_DATE_EXPR = "current_date";
 
+    private final ManagedQueriesGenerator queriesGenerator;
+
     @Autowired
-    public EfluidAuditDataTransformer(ManagedValueConverter converter, TransformerValueProvider provider) {
+    public EfluidAuditDataTransformer(ManagedValueConverter converter, TransformerValueProvider provider, ManagedQueriesGenerator queriesGenerator) {
         super(converter, provider);
+        this.queriesGenerator = queriesGenerator;
     }
 
     @Override
@@ -51,7 +56,8 @@ public class EfluidAuditDataTransformer extends Transformer<EfluidAuditDataTrans
 
     @Override
     protected Runner runner(Config config, DictionaryEntry dict) {
-        return new Runner(getValueProvider(), config, dict);
+
+        return new Runner(getValueProvider(), config, dict, this.queriesGenerator);
     }
 
     public static class Config extends Transformer.TransformerConfig {
@@ -71,7 +77,7 @@ public class EfluidAuditDataTransformer extends Transformer<EfluidAuditDataTrans
         private List<Pattern> appliedValueColumnMatchers;
 
         @JsonIgnore
-        private List<Pattern> appliedUpdateColumnMatchers;
+        private Map<Pattern, String> appliedUpdateColumnMatchers;
 
         @JsonIgnore
         private Map<String, List<Pattern>> appliedValueFilterMatchers;
@@ -185,21 +191,7 @@ public class EfluidAuditDataTransformer extends Transformer<EfluidAuditDataTrans
             }
 
             // Continue only if value pattern may match (check that column at least exists)
-            if (this.appliedValueColumnMatchers.size() > 0 && this.appliedValueColumnMatchers.stream().noneMatch(c -> c.matcher(entry.getPayload()).matches())) {
-                return false;
-            }
-
-
-            // Preload patterns for date and actor updates (get columns and compile)
-            if (this.appliedUpdateColumnMatchers == null) {
-                this.appliedUpdateColumnMatchers = generatePayloadMatchersFromColumnPatterns(
-                        Stream.concat(
-                                this.dateUpdates != null ? this.dateUpdates.keySet().stream() : Stream.empty(),
-                                this.actorUpdates != null ? this.actorUpdates.keySet().stream() : Stream.empty()
-                        ));
-            }
-
-            return this.appliedUpdateColumnMatchers.stream().anyMatch(c -> c.matcher(entry.getPayload()).matches());
+            return this.appliedValueColumnMatchers.size() <= 0 || this.appliedValueColumnMatchers.stream().anyMatch(c -> c.matcher(entry.getPayload()).matches());
         }
 
         boolean isValueFilterMatches(List<Value> values) {
@@ -209,7 +201,7 @@ public class EfluidAuditDataTransformer extends Transformer<EfluidAuditDataTrans
                                 ? this.appliedValueFilterPatterns.entrySet().stream()
                                 .collect(groupingBy(
                                         Map.Entry::getKey,
-                                        mapping(e -> Pattern.compile(e.getValue()), toList())))
+                                        mapping(e -> compile(e.getValue()), toList())))
                                 : new HashMap<>();
             }
 
@@ -225,18 +217,76 @@ public class EfluidAuditDataTransformer extends Transformer<EfluidAuditDataTrans
                         return this.appliedValueFilterMatchers.get(v.getName()).stream().anyMatch(c -> c.matcher(val).matches());
                     });
         }
+
+        /**
+         * From the columns specified in a DictionaryEntry, keep only the ones which would have been matched by current config, to add them.
+         * Values are specified as TransformedValue to allow erasure (can be a "null" value, which is valid)
+         *
+         * @param possibleColumnsFromDictEntry columns of current DictEntry. Keep order if any
+         * @param provider                     date provider for transformation
+         * @return exactly transformed columns mapped to their optional values.
+         */
+        Map<String, NullableValue> getColumnTransformationsFromDefinitions(
+                Collection<String> possibleColumnsFromDictEntry,
+                TransformerValueProvider provider) {
+
+            String currentTime = provider.getFormatedCurrentTime();
+
+            // 1st step : get "actor" values mapped to pattern
+            Map<Pattern, NullableValue> replacementPatterns = getActorUpdates() != null
+                    ? new HashMap<>(
+                    getActorUpdates().entrySet().stream()
+                            .collect(toMap(
+                                    e -> compile(e.getKey()),
+                                    e -> isEmpty(e.getValue())
+                                            ? new NullableValue(ColumnType.STRING, null)
+                                            : new NullableValue(ColumnType.STRING, e.getValue()))
+                            ))
+                    : new HashMap<>();
+
+            // 2nd step : get "date" values mapped to pattern, added to actor ones
+            if (getDateUpdates() != null) {
+                getDateUpdates().forEach((k, v) -> {
+                    if (isEmpty(v)) {
+                        replacementPatterns.put(compile(k), new NullableValue(ColumnType.TEMPORAL, null));
+                    } else if (CURRENT_DATE_EXPR.equals(v)) {
+                        replacementPatterns.put(compile(k), new NullableValue(ColumnType.TEMPORAL, currentTime));
+                    } else {
+                        replacementPatterns.put(compile(k), new NullableValue(ColumnType.TEMPORAL, FormatUtils.format(FormatUtils.parseLd(v).atStartOfDay())));
+                    }
+                });
+            }
+
+            // Will keep the columns natural order (which should be the selectClause order)
+            Map<String, NullableValue> columnsWithReplacements = new LinkedHashMap<>();
+
+            // Final step : for columns getting a corresponding match in patterns, map the found value
+            possibleColumnsFromDictEntry.forEach(c ->
+                    replacementPatterns.entrySet().stream()
+                            .filter(e -> e.getKey().matcher(c).matches())
+                            .findFirst() /* Use 1st found only if duplicated in actor / dates ! */
+                            .ifPresent(e -> columnsWithReplacements.put(c, e.getValue()))
+
+            );
+
+            return columnsWithReplacements;
+        }
     }
 
     /**
-     * Transformation model for
+     * Transformation model for Efluid audit data - use the config to identify the transformation to process, and apply
+     * them to the payload
      */
     public static class Runner extends Transformer.TransformerRunner<EfluidAuditDataTransformer.Config> {
 
-        private final Map<Pattern, String> mappedReplacedValues;
+        private final Map<String, NullableValue> mappedReplacedValues;
 
-        private Runner(TransformerValueProvider provider, Config config, DictionaryEntry dict) {
+        private Runner(TransformerValueProvider provider, Config config, DictionaryEntry dict, ManagedQueriesGenerator queriesGenerator) {
             super(provider, config, dict);
-            this.mappedReplacedValues = prepareMappedReplacedValues(config);
+            // Init content for a replacement process on specified columns
+            this.mappedReplacedValues = this.config.getColumnTransformationsFromDefinitions(
+                    queriesGenerator.splitSelectClause(this.dict.getSelectClause(), null, null),
+                    this.provider);
         }
 
         @Override
@@ -244,48 +294,107 @@ public class EfluidAuditDataTransformer extends Transformer<EfluidAuditDataTrans
             return this.config.isEntryMatches(preparedIndexEntry);
         }
 
+        /**
+         * <p>The process here get the prepared "mappedReplacedValues" which are the new values (as NullableValue) mapped to the current dict entry column name.
+         * This needs to be able to process various cases :
+         * <ul>
+         *     <li>If a value in the payload is not specified as transformed, don't touch it. For example value "A" stay "A"</li>
+         *     <li>If a value in the payload is specified as transformed, replace its content with the transformed one. Even if the new content is "null". For example value "A" became "B" or null</li>
+         *     <li>If a value which should be transformed is NOT in the payload, init it with the transformed content. For example value null (missing value) became "B"</li>
+         * </ul>
+         * </p>
+         * <p>For the processed payload (as a list of <tt>Value</tt>), 2 steps :
+         * <ul>
+         *     <li>1st : For each payload value, apply the identified replacement if any. If the replacement is a null value, then the processed value is erased</li>
+         *     <li>2nd : For each  prepared "mappedReplacedValues" column not processed (ie : columns not present in the current payload but with a configured transformation), create a new "transformed" value</li>
+         * </ul>
+         * </p>
+         *
+         * @param values the payload to process. The list can be modified (update in value content or added values)
+         */
         @Override
         public void accept(List<Value> values) {
             if (this.config.isValueFilterMatches(values)) {
+
+                List<String> toTransform = new ArrayList<>(this.mappedReplacedValues.keySet());
+
                 // Process on indexed list for replacement support
                 for (int i = 0; i < values.size(); i++) {
                     Value val = values.get(i);
-                    // Apply only 1 matching rule
-                    final int finalI = i;
-                    this.mappedReplacedValues.entrySet().stream()
-                            .filter(e -> e.getKey().matcher(val.getName()).matches())
-                            .findFirst()
-                            .ifPresent(e -> values.set(finalI, transformedValue(val, e.getValue())));
+
+                    NullableValue replacement = this.mappedReplacedValues.get(val.getName());
+
+                    // If no optional => Not transformed
+                    if (replacement != null) {
+                        if (replacement.hasValue()) {
+                            values.set(i, transformedValue(val, replacement.getValue()));
+                        } else {
+                            values.set(i, transformedValue(val, ""));
+                        }
+                        toTransform.remove(val.getName());
+                    }
                 }
-            }
-        }
 
-        /**
-         * Init content for a replacement process on specified columns
-         *
-         * @param config
-         * @return
-         */
-        private Map<Pattern, String> prepareMappedReplacedValues(Config config) {
-
-            String currentTime = this.provider.getFormatedCurrentTime();
-
-            Map<Pattern, String> replacements = config.getActorUpdates() != null
-                    ? new HashMap<>(config.getActorUpdates().entrySet().stream().collect(
-                    Collectors.toMap(e -> Pattern.compile(e.getKey()), Map.Entry::getValue)))
-                    : new HashMap<>();
-
-            if (config.getDateUpdates() != null) {
-                config.getDateUpdates().forEach((k, v) -> {
-                    if (CURRENT_DATE_EXPR.equals(v)) {
-                        replacements.put(Pattern.compile(k), currentTime);
-                    } else {
-                        replacements.put(Pattern.compile(k), FormatUtils.format(FormatUtils.parseLd(v).atStartOfDay()));
+                // Add new values for column missing in payload
+                toTransform.forEach(c -> {
+                    NullableValue replacement = this.mappedReplacedValues.get(c);
+                    if (replacement.hasValue()) {
+                        values.add(replacement.toTransformedValueOnMissingTarget(c));
                     }
                 });
             }
+        }
+    }
 
-            return replacements;
+    /**
+     * Holder of a transformed value : can be a new value, or null (for erasure). Contains an "expected" type
+     * to allow basic init even on missing columns in payload
+     */
+    private static class NullableValue {
+
+        private final ColumnType type;
+        private final String value;
+
+        private NullableValue(ColumnType type, String value) {
+            this.type = type;
+            this.value = value;
+        }
+
+        public ColumnType getType() {
+            return type;
+        }
+
+        public String getValue() {
+            return value;
+        }
+
+        boolean hasValue() {
+            return this.value != null;
+        }
+
+        /**
+         * Init a TransformedValue from a missing target (when a null or missing value of payload is transformed to something)
+         *
+         * @param colName
+         * @return
+         */
+        Value toTransformedValueOnMissingTarget(final String colName) {
+            return transformedValue(new Value() {
+                @Override
+                public String getName() {
+                    return colName;
+                }
+
+                @Override
+                public byte[] getValue() {
+                    return null;
+                }
+
+                @Override
+                public ColumnType getType() {
+                    return NullableValue.this.type;
+                }
+            }, getValue());
         }
     }
 }

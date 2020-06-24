@@ -135,6 +135,16 @@ public class CommonStepDefs extends CucumberStepDefs {
         // Nothing
     }
 
+    @Given("^the index is configured to keep empty values in payload$")
+    public void keep_empty_values(){
+        enableKeepEmptyInManagedValues();
+    }
+
+    @Given("^the index is configured to ignore empty values in payload$")
+    public void ignore_empty_values(){
+        disableKeepEmptyInManagedValues();
+    }
+
     @Given("^the current model id is \"(.*)\"$")
     public void mock_model_id(String id) {
         mockDatabaseIdentifierWithVersion(id, true);

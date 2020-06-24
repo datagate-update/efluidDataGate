@@ -7,6 +7,7 @@ import fr.uem.efluid.model.entities.IndexAction;
 import fr.uem.efluid.services.types.PreparedIndexEntry;
 import fr.uem.efluid.tools.EfluidAuditDataTransformer.Config;
 import fr.uem.efluid.utils.DataGenerationUtils;
+import fr.uem.efluid.utils.DatasourceUtils;
 import fr.uem.efluid.utils.FormatUtils;
 import org.assertj.core.api.AbstractStringAssert;
 import org.junit.Test;
@@ -32,9 +33,9 @@ public class EfluidAuditDataTransformerTest {
             return CURRENT_DATE;
         }
     };
-    private EfluidAuditDataTransformer transformer = new EfluidAuditDataTransformer(this.converter, this.provider);
+    private EfluidAuditDataTransformer transformer = new EfluidAuditDataTransformer(this.converter, this.provider, queriesGenerator());
 
-    private static final String OLD = FormatUtils.format(LocalDateTime.of(2015, 12, 25, 15, 25, 46));
+    private static final LocalDateTime OLD = LocalDateTime.of(2015, 12, 25, 15, 25, 46);
 
     @Test
     public void testVariousApplyOnAllDictionnary() {
@@ -92,7 +93,7 @@ public class EfluidAuditDataTransformerTest {
         );
 
         this.transformer.transform(
-                table("TOTHER"),
+                table("TOTHER","COL1","DATE1", "DATE2", "ACT1", "ACT2", "ACT3"),
                 config(
                         "    {"
                                 + "  \"tablePattern\":\"TOTHER\","
@@ -105,10 +106,10 @@ public class EfluidAuditDataTransformerTest {
         );
 
         // Only ID1 is changed
-        check(diff, 0).isEqualTo("COL1:'test1', DATE1:'2015-12-25 15:25:46', DATE2:'2015-12-25 15:25:46', ACT1:'test', ACT2:'test', ACT3:'test'");
-        check(diff, 1).isEqualTo("COL1:'test2', DATE1:'2022-12-25 00:00:00', DATE2:'2025-12-25 00:00:00', ACT1:'bob', ACT2:'toto', ACT3:'test'");
-        check(diff, 2).isEqualTo("COL1:'test3', DATE1:'2015-12-25 15:25:46', DATE2:'2015-12-25 15:25:46', ACT1:'test', ACT2:'test', ACT3:'test'");
-        check(diff, 3).isEqualTo("COL1:'test4', DATE1:'2015-12-25 15:25:46', DATE2:'2015-12-25 15:25:46', ACT1:'test', ACT2:'test', ACT3:'test'");
+        check(diff, 0).isEqualTo("COL1:'test1', DATE1:2015-12-25 15:25:46, DATE2:2015-12-25 15:25:46, ACT1:'test', ACT2:'test', ACT3:'test'");
+        check(diff, 1).isEqualTo("COL1:'test2', DATE1:2022-12-25 00:00:00, DATE2:2025-12-25 00:00:00, ACT1:'bob', ACT2:'toto', ACT3:'test'");
+        check(diff, 2).isEqualTo("COL1:'test3', DATE1:2015-12-25 15:25:46, DATE2:2015-12-25 15:25:46, ACT1:'test', ACT2:'test', ACT3:'test'");
+        check(diff, 3).isEqualTo("COL1:'test4', DATE1:2015-12-25 15:25:46, DATE2:2015-12-25 15:25:46, ACT1:'test', ACT2:'test', ACT3:'test'");
     }
 
     @Test
@@ -122,7 +123,7 @@ public class EfluidAuditDataTransformerTest {
         );
 
         this.transformer.transform(
-                table("TOTHER"),
+                table("TOTHER","COL1","DATE1", "DATE2", "ACT1", "ACT2", "ACT3"),
                 config(
                         "    {"
                                 + "  \"tablePattern\":\"TOTHER\","
@@ -135,10 +136,10 @@ public class EfluidAuditDataTransformerTest {
         );
 
         // Only ID2 is changed
-        check(diff, 0).isEqualTo("COL1:'test1', DATE1:'2015-12-25 15:25:46', DATE2:'2015-12-25 15:25:46', ACT1:'test', ACT2:'test', ACT3:'test'");
-        check(diff, 1).isEqualTo("COL1:'test2', DATE1:'2015-12-25 15:25:46', DATE2:'2015-12-25 15:25:46', ACT1:'test', ACT2:'test', ACT3:'test'");
-        check(diff, 2).isEqualTo("COL1:'test3', DATE1:'2022-12-25 00:00:00', DATE2:'2025-12-25 00:00:00', ACT1:'bob', ACT2:'toto', ACT3:'test'");
-        check(diff, 3).isEqualTo("COL1:'test4', DATE1:'2015-12-25 15:25:46', DATE2:'2015-12-25 15:25:46', ACT1:'test', ACT2:'test', ACT3:'test'");
+        check(diff, 0).isEqualTo("COL1:'test1', DATE1:2015-12-25 15:25:46, DATE2:2015-12-25 15:25:46, ACT1:'test', ACT2:'test', ACT3:'test'");
+        check(diff, 1).isEqualTo("COL1:'test2', DATE1:2015-12-25 15:25:46, DATE2:2015-12-25 15:25:46, ACT1:'test', ACT2:'test', ACT3:'test'");
+        check(diff, 2).isEqualTo("COL1:'test3', DATE1:2022-12-25 00:00:00, DATE2:2025-12-25 00:00:00, ACT1:'bob', ACT2:'toto', ACT3:'test'");
+        check(diff, 3).isEqualTo("COL1:'test4', DATE1:2015-12-25 15:25:46, DATE2:2015-12-25 15:25:46, ACT1:'test', ACT2:'test', ACT3:'test'");
     }
 
     @Test
@@ -152,7 +153,7 @@ public class EfluidAuditDataTransformerTest {
         );
 
         this.transformer.transform(
-                table("TOTHER"),
+                table("TOTHER","COL1","DATE1", "DATE2", "ACT1", "ACT2", "ACT3"),
                 config(
                         "    {"
                                 + "  \"tablePattern\":\"TOTHER\","
@@ -165,10 +166,10 @@ public class EfluidAuditDataTransformerTest {
         );
 
         // All are changed
-        check(diff, 0).isEqualTo("COL1:'test1', DATE1:'2022-12-25 00:00:00', DATE2:'2025-12-25 00:00:00', ACT1:'bob', ACT2:'toto', ACT3:'test'");
-        check(diff, 1).isEqualTo("COL1:'test2', DATE1:'2022-12-25 00:00:00', DATE2:'2025-12-25 00:00:00', ACT1:'bob', ACT2:'toto', ACT3:'test'");
-        check(diff, 2).isEqualTo("COL1:'test3', DATE1:'2022-12-25 00:00:00', DATE2:'2025-12-25 00:00:00', ACT1:'bob', ACT2:'toto', ACT3:'test'");
-        check(diff, 3).isEqualTo("COL1:'test4', DATE1:'2022-12-25 00:00:00', DATE2:'2025-12-25 00:00:00', ACT1:'bob', ACT2:'toto', ACT3:'test'");
+        check(diff, 0).isEqualTo("COL1:'test1', DATE1:2022-12-25 00:00:00, DATE2:2025-12-25 00:00:00, ACT1:'bob', ACT2:'toto', ACT3:'test'");
+        check(diff, 1).isEqualTo("COL1:'test2', DATE1:2022-12-25 00:00:00, DATE2:2025-12-25 00:00:00, ACT1:'bob', ACT2:'toto', ACT3:'test'");
+        check(diff, 2).isEqualTo("COL1:'test3', DATE1:2022-12-25 00:00:00, DATE2:2025-12-25 00:00:00, ACT1:'bob', ACT2:'toto', ACT3:'test'");
+        check(diff, 3).isEqualTo("COL1:'test4', DATE1:2022-12-25 00:00:00, DATE2:2025-12-25 00:00:00, ACT1:'bob', ACT2:'toto', ACT3:'test'");
     }
 
     @Test
@@ -180,7 +181,7 @@ public class EfluidAuditDataTransformerTest {
         );
 
         this.transformer.transform(
-                table("TOTHER"),
+                table("TOTHER","VALUE", "ETAT_OBJET","DATE_SUPPRESSION", "DATE_MODIFICATION","DATE_CREATION","ACTEUR_SUPPRESSION","ACTEUR_MODIFICATION", "ACTEUR_CREATION"),
                 config(
                         "  {" +
                                 "  \"tablePattern\":\"T_EFLUID_TEST_AUDIT\"," +
@@ -193,8 +194,8 @@ public class EfluidAuditDataTransformerTest {
         );
 
         // All are changed
-        check(diff, 0).isEqualTo("VALUE:'INIT_1', ETAT_OBJET:'TODO_DELETED', DATE_SUPPRESSION:'2020-05-11 00:00:00', DATE_MODIFICATION:'2020-05-11 00:00:00', DATE_CREATION:'2020-05-11 00:00:00', ACTEUR_SUPPRESSION:'evt 154654', ACTEUR_MODIFICATION:'evt 154654', ACTEUR_CREATION:'evt 154654'");
-        check(diff, 1).isEqualTo("VALUE:'INIT_2', ETAT_OBJET:'TODO_UPDATE', DATE_SUPPRESSION:'2020-05-11 00:00:00', DATE_MODIFICATION:'2020-05-11 00:00:00', DATE_CREATION:'2020-05-11 00:00:00', ACTEUR_SUPPRESSION:'evt 154654', ACTEUR_MODIFICATION:'evt 154654', ACTEUR_CREATION:'evt 154654'");
+        check(diff, 0).isEqualTo("VALUE:'INIT_1', ETAT_OBJET:'TODO_DELETED', DATE_SUPPRESSION:2020-05-11 00:00:00, DATE_MODIFICATION:2020-05-11 00:00:00, DATE_CREATION:2020-05-11 00:00:00, ACTEUR_SUPPRESSION:'evt 154654', ACTEUR_MODIFICATION:'evt 154654', ACTEUR_CREATION:'evt 154654'");
+        check(diff, 1).isEqualTo("VALUE:'INIT_2', ETAT_OBJET:'TODO_UPDATE', DATE_SUPPRESSION:2020-05-11 00:00:00, DATE_MODIFICATION:2020-05-11 00:00:00, DATE_CREATION:2020-05-11 00:00:00, ACTEUR_SUPPRESSION:'evt 154654', ACTEUR_MODIFICATION:'evt 154654', ACTEUR_CREATION:'evt 154654'");
     }
 
     @Test
@@ -206,7 +207,7 @@ public class EfluidAuditDataTransformerTest {
         );
 
         this.transformer.transform(
-                table("TOTHER"),
+                table("TOTHER","VALUE", "ETAT_OBJET","DATE_SUPPRESSION", "DATE_MODIFICATION","DATE_CREATION","ACTEUR_SUPPRESSION","ACTEUR_MODIFICATION", "ACTEUR_CREATION"),
                 config(
                         "  {" +
                                 "  \"tablePattern\":\"T_EFLUID_TEST_AUDIT\"," +
@@ -218,8 +219,35 @@ public class EfluidAuditDataTransformerTest {
         );
 
         // All are changed
-        check(diff, 0).isEqualTo("VALUE:'INIT_1', ETAT_OBJET:'TODO_DELETED', DATE_SUPPRESSION:'" + CURRENT_DATE + "', DATE_MODIFICATION:'" + CURRENT_DATE + "', DATE_CREATION:'" + CURRENT_DATE + "', ACTEUR_SUPPRESSION:'evt 154654', ACTEUR_MODIFICATION:'evt 154654', ACTEUR_CREATION:'evt 154654'");
-        check(diff, 1).isEqualTo("VALUE:'INIT_2', ETAT_OBJET:'TODO_UPDATE', DATE_SUPPRESSION:'" + CURRENT_DATE + "', DATE_MODIFICATION:'" + CURRENT_DATE + "', DATE_CREATION:'" + CURRENT_DATE + "', ACTEUR_SUPPRESSION:'evt 154654', ACTEUR_MODIFICATION:'evt 154654', ACTEUR_CREATION:'evt 154654'");
+        check(diff, 0).isEqualTo("VALUE:'INIT_1', ETAT_OBJET:'TODO_DELETED', DATE_SUPPRESSION:" + CURRENT_DATE + ", DATE_MODIFICATION:" + CURRENT_DATE + ", DATE_CREATION:" + CURRENT_DATE + ", ACTEUR_SUPPRESSION:'evt 154654', ACTEUR_MODIFICATION:'evt 154654', ACTEUR_CREATION:'evt 154654'");
+        check(diff, 1).isEqualTo("VALUE:'INIT_2', ETAT_OBJET:'TODO_UPDATE', DATE_SUPPRESSION:" + CURRENT_DATE + ", DATE_MODIFICATION:" + CURRENT_DATE + ", DATE_CREATION:" + CURRENT_DATE + ", ACTEUR_SUPPRESSION:'evt 154654', ACTEUR_MODIFICATION:'evt 154654', ACTEUR_CREATION:'evt 154654'");
+    }
+
+    @Test
+    public void testApplyOnNull() {
+
+        List<? extends PreparedIndexEntry> diff = diff(
+                l("1", p("VALUE", "INIT_1")),
+                l("2", p("DATE", OLD)),
+                l("3")
+        );
+
+        this.transformer.transform(
+                table("TOTHER","VALUE", "DATE"),
+                config(
+                        "  {" +
+                                "  \"tablePattern\":\"TOTHER\"," +
+                                "  \"appliedKeyPatterns\":[\".*\"]," +
+                                "  \"dateUpdates\":{\"DATE\":\"current_date\"}," +
+                                "  \"actorUpdates\":{\"VALUE\":\"transformed\"}" +
+                                "}"
+                ), diff
+        );
+
+        // All are changed
+        check(diff, 0).isEqualTo("VALUE:'transformed', DATE:" + CURRENT_DATE + "");
+        check(diff, 1).isEqualTo("DATE:" + CURRENT_DATE + ", VALUE:'transformed'");
+        check(diff, 2).isEqualTo("VALUE:'transformed', DATE:" + CURRENT_DATE + "");
     }
 
     private AbstractStringAssert<?> check(List<? extends PreparedIndexEntry> transformed, int index) {
@@ -236,9 +264,9 @@ public class EfluidAuditDataTransformerTest {
 
     }
 
-
-    private static DictionaryEntry table(String name) {
-        return DataGenerationUtils.entry("Modèle de compteur", null, "\"CODE_SERIE\", \"CREATE_DATE\", \"DESCRIPTION\", \"FABRICANT\", \"TYPEID\"",
+    private static DictionaryEntry table(String name, String ... columns) {
+        return DataGenerationUtils.entry("Modèle de compteur", null,
+                Stream.of(columns).collect(Collectors.joining("\", cur.\"","cur.\"","\"")),
                 name, "\"ACTIF\"=true", "CODE_SERIE", ColumnType.STRING);
     }
 
@@ -267,5 +295,15 @@ public class EfluidAuditDataTransformerTest {
 
     private static Pair<String, Object> p(String name, Object obj) {
         return Pair.of(name, obj);
+    }
+
+    private static ManagedQueriesGenerator queriesGenerator() {
+        DatasourceUtils.CustomQueryGenerationRules rules = new DatasourceUtils.CustomQueryGenerationRules();
+
+        rules.setColumnNamesProtected(true);
+        rules.setDatabaseDateFormat("dd-MM-yyyy HH:mm:ss");
+        rules.setTableNamesProtected(true);
+
+        return new ManagedQueriesGenerator(rules);
     }
 }

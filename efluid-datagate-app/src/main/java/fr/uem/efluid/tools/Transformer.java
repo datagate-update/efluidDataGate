@@ -216,12 +216,14 @@ public abstract class Transformer<C extends Transformer.TransformerConfig, R ext
          * @return
          */
         protected List<Pattern> generatePayloadMatchersFromColumnPatterns(Stream<String> columnPatterns) {
-            return columnPatterns.map(v -> {
-                if (v.equals(".*")) {
-                    return v;
-                }
-                return "^.*" + v + ".*$";
-            }).map(Pattern::compile).collect(toList());
+            return columnPatterns.map(TransformerConfig::generatePayloadMatcher).collect(toList());
+        }
+
+        protected static Pattern generatePayloadMatcher(String payloadPattern) {
+            return Pattern.compile(
+                    payloadPattern.equals(".*")
+                            ? payloadPattern
+                            : "^.*" + payloadPattern + ".*$");
         }
     }
 
@@ -247,7 +249,7 @@ public abstract class Transformer<C extends Transformer.TransformerConfig, R ext
             this.dict = dict;
         }
 
-        protected Value transformedValue(Value existing, String newValue) {
+        protected static Value transformedValue(Value existing, String newValue) {
             return new TransformedValue(existing, FormatUtils.toBytes(newValue));
         }
 
@@ -282,7 +284,9 @@ public abstract class Transformer<C extends Transformer.TransformerConfig, R ext
             }
 
             public String getTransformation() {
-                return getName() + " : " + this.target.getValueAsString() + TRANSFORMATION_DISPLAY + getValueAsString();
+                return this.target.getValue() != null
+                        ? getName() + " : " + this.target.getValueAsString() + TRANSFORMATION_DISPLAY + getValueAsString()
+                        : getName() + " : n/a" + TRANSFORMATION_DISPLAY + getValueAsString();
             }
         }
     }

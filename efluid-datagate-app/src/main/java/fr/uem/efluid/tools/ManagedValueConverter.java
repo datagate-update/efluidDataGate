@@ -8,6 +8,7 @@ import org.springframework.util.StringUtils;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -96,7 +97,7 @@ public class ManagedValueConverter {
             final String value,
             final ColumnType type) {
 
-        if (this.keepEmptyValues || value != null) {
+        if (isProcessValue(value)) {
 
             builder.append(colName).append(AFFECT);
 
@@ -128,7 +129,7 @@ public class ManagedValueConverter {
             final String value,
             final Map<String, byte[]> lobs) {
 
-        if (this.keepEmptyValues || value != null) {
+        if (isProcessValue(value)) {
             builder.append(colName).append(AFFECT);
 
             byte[] bytes = FormatUtils.toBytes(value);
@@ -156,7 +157,7 @@ public class ManagedValueConverter {
             final byte[] value,
             final Map<String, byte[]> lobs) {
 
-        if (this.keepEmptyValues || value != null) {
+        if (isProcessValue(value)) {
             builder.append(colName).append(AFFECT);
 
             String hash = hashBinary(value);
@@ -181,7 +182,7 @@ public class ManagedValueConverter {
             final String colName,
             final Date date) {
 
-        if (this.keepEmptyValues || date != null) {
+        if (isProcessValue(date)) {
             builder.append(colName).append(AFFECT);
 
             if (date == null) {
@@ -239,7 +240,7 @@ public class ManagedValueConverter {
             appendExtractedValue(
                     oneLine,
                     value.getKey(),
-                    value.getValue().toString(),
+                    value.getValue() instanceof LocalDateTime ? FormatUtils.format((LocalDateTime) value.getValue()) : value.getValue().toString(),
                     ColumnType.forObject(value.getValue()));
         }
 
@@ -276,11 +277,7 @@ public class ManagedValueConverter {
                 .map(v -> v.getName().substring(SelectClauseGenerator.LINK_TAB_REFLAP.length()))
                 .collect(Collectors.toSet());
 
-        for (Value value : values) {
-            if (linkValueNames.contains(value.getName())) {
-                values.remove(value);
-            }
-        }
+        values.removeIf(value -> linkValueNames.contains(value.getName()));
     }
 
     /**
@@ -395,6 +392,10 @@ public class ManagedValueConverter {
         }
 
         return displayModificationRendering(expandInternalValue(activePayload), expandInternalValue(existingPayload));
+    }
+
+    protected boolean isProcessValue(Object value) {
+        return this.keepEmptyValues || value != null;
     }
 
     /**

@@ -7,7 +7,6 @@ import com.unboundid.ldap.sdk.LDAPException;
 import com.unboundid.ldif.LDIFReader;
 import fr.uem.efluid.ColumnType;
 import fr.uem.efluid.cucumber.stubs.*;
-import fr.uem.efluid.model.DiffLine;
 import fr.uem.efluid.model.entities.*;
 import fr.uem.efluid.model.repositories.DatabaseDescriptionRepository;
 import fr.uem.efluid.security.UserHolder;
@@ -33,7 +32,6 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.Null;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -152,6 +150,9 @@ public abstract class CucumberStepDefs {
 
     @Autowired
     private InMemoryDirectoryServer ldapServer;
+
+    @Autowired
+    private SwitchableManagedValueConverter switchableManagedValueConverter;
 
     /**
      * <p>
@@ -431,11 +432,24 @@ public abstract class CucumberStepDefs {
         return this.commitService.processCommitExport(exportDisplay.getUuid());
     }
 
+    protected void disableKeepEmptyInManagedValues() {
+        this.switchableManagedValueConverter.setKeepEmpty(false);
+    }
+
+    protected void enableKeepEmptyInManagedValues() {
+        this.switchableManagedValueConverter.setKeepEmpty(true);
+    }
+
     /**
      *
      */
     protected void resetAsyncProcess() {
         this.asyncDriver.reset();
+    }
+
+    protected void resetManagedValueConverter() {
+        // Default "true"
+        enableKeepEmptyInManagedValues();
     }
 
     protected void resetDatabaseIdentifier() {

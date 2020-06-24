@@ -4,6 +4,7 @@ import fr.uem.efluid.cucumber.stubs.TweakedAsyncDriver;
 import fr.uem.efluid.security.providers.DatabaseOnlyAccountProvider;
 import fr.uem.efluid.tools.AsyncDriver;
 import fr.uem.efluid.tools.ManagedQueriesGenerator.QueryGenerationRules;
+import fr.uem.efluid.tools.ManagedValueConverter;
 import fr.uem.efluid.tools.TransformerValueProvider;
 import fr.uem.efluid.utils.DatasourceUtils;
 import fr.uem.efluid.utils.DatasourceUtils.CustomDataSourceParameters;
@@ -120,6 +121,12 @@ public class SystemTestConfig {
         registration.setOrder(2);
 
         return registration;
+    }
+
+    @Bean
+    @Primary
+    public ManagedValueConverter testableManagedValueConverter() {
+        return new SwitchableManagedValueConverter();
     }
 
     /**

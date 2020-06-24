@@ -859,8 +859,9 @@ Feature: A complete set of test case are specified for Efluid needs
       | T_EFLUID_TEST_AUDIT | 2   | ADD    | true         | VALUE:'2', ETAT_OBJET:'', DATE_SUPPRESSION:, DATE_MODIFICATION:, DATE_CREATION:, ACTEUR_SUPPRESSION:'', ACTEUR_MODIFICATION:'', ACTEUR_CREATION:'' |
 
   @TestEfluidAuditTransformerRules
-  Scenario: The audit transformer apply generated audit data on specified values even when null - correct matcher
+  Scenario: The audit transformer apply generated audit data on specified values even when null - correct matcher with managed empty values
     Given the test is an Efluid standard scenario
+    And the index is configured to keep empty values in payload
     And the configured transformers for project "Default" :
       | name  | type         | priority | configuration                                                                                        |
       | Audit | EFLUID_AUDIT | 1        | {"tablePattern":".*","appliedKeyPatterns":[".*"],"dateUpdates":{},"actorUpdates":{"ACTEUR.*":"bob"}} |
@@ -894,3 +895,45 @@ Feature: A complete set of test case are specified for Efluid needs
       | Table               | Key | Action | Need Resolve | Payload                                                                                                                                                                                                                                 |
       | T_EFLUID_TEST_AUDIT | 1   | ADD    | true         | VALUE:'1', ETAT_OBJET:'', DATE_SUPPRESSION:2020-06-12 22:14:00, DATE_MODIFICATION:2020-06-12 22:14:00, DATE_CREATION:2020-06-12 22:14:00, ACTEUR_SUPPRESSION:'evt 295556', ACTEUR_MODIFICATION:'evt 12345', ACTEUR_CREATION:'evt 67890' |
       | T_EFLUID_TEST_AUDIT | 2   | ADD    | true         | VALUE:'2', ETAT_OBJET:'', DATE_SUPPRESSION:2020-06-12 22:14:00, DATE_MODIFICATION:2020-06-12 22:14:00, DATE_CREATION:2020-06-12 22:14:00, ACTEUR_SUPPRESSION:'evt 295556', ACTEUR_MODIFICATION:'evt 12345', ACTEUR_CREATION:'evt 67890' |
+
+  @TestEfluidAuditTransformerRules
+  Scenario: The audit transformer apply generated audit data on specified values even when null - correct matcher with ignored empty values
+    Given the test is an Efluid standard scenario
+    And the index is configured to ignore empty values in payload
+    And the configured transformers for project "Default" :
+      | name  | type         | priority | configuration                                                                                        |
+      | Audit | EFLUID_AUDIT | 1        | {"tablePattern":".*","appliedKeyPatterns":[".*"],"dateUpdates":{},"actorUpdates":{"ACTEUR.*":"bob"}} |
+    And the existing data in managed table "T_EFLUID_TEST_AUDIT" :
+      | id | value | etatObjet | dateSuppression | dateModification | dateCreation | acteurSuppression | acteurModification | acteurCreation |
+      | 1  | 1     |           |                 |                  |              |                   |                    |                |
+      | 2  | 2     |           |                 |                  |              |                   |                    |                |
+      | 3  | 3     |           |                 |                  | 2018-06-12   |                   |                    |                |
+      | 4  | 4     |           |                 |                  |              |                   | bob                |                |
+    And a new commit ":construction: Update 1" has been saved with all the new identified diff content
+    And the user has requested an export of the commit with name ":construction: Update 1" and this customization for transformer "Audit" :
+      """json
+      {
+          "tablePattern" : ".*",
+          "appliedKeyPatterns" : [ ".*" ],
+          "dateUpdates" : {
+              "DATE_SUPPRESSION" : "current_date",
+              "DATE_MODIFICATION" : "current_date",
+              "DATE_CREATION" : "current_date"
+          },
+          "actorUpdates" : {
+              "ACTEUR_MODIFICATION" : "evt 12345",
+              "ACTEUR_CREATION" : "evt 67890",
+              "ACTEUR_SUPPRESSION" : "evt 295556"
+          }
+      }
+      """
+    And the user accesses to the destination environment with the same dictionary
+    And no existing data in managed table "T_EFLUID_TEST_AUDIT" in destination environment
+    And a merge diff analysis has been started and completed with the available source package
+    When the user access to merge commit page
+    Then the merge commit content is rendered with these identified changes :
+      | Table               | Key | Action | Need Resolve | Payload                                                                                                                                                                                                                  |
+      | T_EFLUID_TEST_AUDIT | 1   | ADD    | true         | VALUE:'1', DATE_SUPPRESSION:2020-06-12 22:14:00, DATE_MODIFICATION:2020-06-12 22:14:00, DATE_CREATION:2020-06-12 22:14:00, ACTEUR_SUPPRESSION:'evt 295556', ACTEUR_MODIFICATION:'evt 12345', ACTEUR_CREATION:'evt 67890' |
+      | T_EFLUID_TEST_AUDIT | 2   | ADD    | true         | VALUE:'2', DATE_SUPPRESSION:2020-06-12 22:14:00, DATE_MODIFICATION:2020-06-12 22:14:00, DATE_CREATION:2020-06-12 22:14:00, ACTEUR_SUPPRESSION:'evt 295556', ACTEUR_MODIFICATION:'evt 12345', ACTEUR_CREATION:'evt 67890' |
+      | T_EFLUID_TEST_AUDIT | 3   | ADD    | true         | VALUE:'3', DATE_CREATION:2020-06-12 22:14:00, DATE_SUPPRESSION:2020-06-12 22:14:00, DATE_MODIFICATION:2020-06-12 22:14:00, ACTEUR_SUPPRESSION:'evt 295556', ACTEUR_MODIFICATION:'evt 12345', ACTEUR_CREATION:'evt 67890' |
+      | T_EFLUID_TEST_AUDIT | 4   | ADD    | true         | VALUE:'4', ACTEUR_MODIFICATION:'evt 12345', DATE_SUPPRESSION:2020-06-12 22:14:00, DATE_MODIFICATION:2020-06-12 22:14:00, DATE_CREATION:2020-06-12 22:14:00, ACTEUR_SUPPRESSION:'evt 295556', ACTEUR_CREATION:'evt 67890' |
