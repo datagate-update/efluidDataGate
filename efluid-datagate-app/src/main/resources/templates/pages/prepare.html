@@ -478,7 +478,11 @@
 		};
 
 		const getPageContent = (page) => {
+<<<<<<< Updated upstream
 
+=======
+		console.log(JSON.stringify(activeSearch))
+>>>>>>> Stashed changes
 			$.ajax({
 				type: "POST",
 				url: "/ui/prepare/page/" + page,
@@ -487,6 +491,11 @@
 				dataType: "json",
 				success: (data, status) => {
 
+<<<<<<< Updated upstream
+=======
+				console.log("====> " + JSON.stringify(activeSearch))
+
+>>>>>>> Stashed changes
 					// Remove current page
 					$(".added-item").remove();
 
@@ -602,7 +611,7 @@
     	// Init actions
     	$(document).ready(() => {
 			updateFilterSelectButtonGroup();
-			getPageContent(0);
+			getPageContent(0); //get page content first here with 0
 			$("#selectAllButton").click((e) => processAll('select'));
 			$("#rollbackAllButton").click((e) => processAll('rollback'));
 			$("#ignoreAllButton").click((e) => processAll('ignore'));

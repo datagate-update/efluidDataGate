@@ -627,6 +627,98 @@ public class CommitService extends AbstractApplicationService {
 
     /**
      * <p>
+     * Apply the changes from the prepared local diff, and store the commit (including the
+     * index content)
+     * </p>
+     *
+     * @param prepared preparation source for commit. Can be a local or a merge commit
+     *                 preparation
+     * @return created commit uuid
+     */
+    UUID saveAndApplyPreparedCommitForRevert(
+            PilotedCommitPreparation<?> prepared) {
+
+        LOGGER.debug("Process apply and saving of a new commit with state {} into project {}", prepared.getPreparingState(),
+                prepared.getProjectUuid());
+
+        // Init commit
+        final Commit commit = createCommit(prepared);
+
+        LOGGER.debug("Processing commit {} : commit initialized, preparing index content", commit.getUuid());
+
+        List<IndexEntry> entries = prepared.streamDiffContentMappedToDictionaryEntryUuid()
+                .flatMap(l -> this.diffs.splitCombinedSimilar(l.getValue()).stream())
+                .filter(PreparedIndexEntry::isRollbacked) //DOES SOMETHING IF IT IS ROLLBACKED ?
+                .map(PreparedIndexEntry::toEntity)
+                .peek(e -> e.setCommit(commit))
+                .collect(Collectors.toList());
+
+        LOGGER.info("Prepared index with {} items for new commit {}", entries.size(), commit.getUuid());
+
+        LOGGER.debug("New commit {} of state {} with comment {} prepared with {} index lines",
+                commit.getUuid(), prepared.getPreparingState(), commit.getComment(), entries.size());
+
+        // Prepare used lobs
+        List<LobProperty> newLobs = this.diffs.prepareUsedLobsForIndex(entries, prepared.getDiffLobs());
+
+        LOGGER.info("Start saving {} index items for new commit {}", entries.size(), commit.getUuid());
+
+        // Save index and set back to commit with bi-directional link
+        commit.setIndex(this.indexes.saveAll(entries));
+
+        LOGGER.info("Start saving {} lobs items for new commit {}", newLobs.size(), commit.getUuid());
+
+        // Add commit to lobs and save
+        newLobs.forEach(l -> l.setCommit(commit));
+        this.lobs.saveAll(newLobs);
+
+        // Updated commit link
+        this.commits.save(commit);
+
+        // For merge : apply (will rollback previous steps if error found)
+        if (prepared.getPreparingState() == CommitState.MERGED) {
+            LOGGER.info("Processing merge commit {} : now apply all {} modifications prepared from imported values",
+                    commit.getUuid(), entries.size());
+            this.applyDiffService.applyDiff(entries, prepared.getDiffLobs());
+            LOGGER.debug("Processing merge commit {} : diff applied with success", commit.getUuid());
+
+            // And execute attachments if needed
+            if (this.attachProcs.isExecuteSupport()) {
+                List<AttachmentLine> runnableAtts = prepared.getCommitData().getAttachments().stream()
+                        .filter(a -> a.getType().isRunnable() && a.isExecuted()).collect(Collectors.toList());
+
+                // Process only if some found
+                if (runnableAtts.size() > 0) {
+
+                    LOGGER.info("Processing merge commit {} : now run {} executable scripts",
+                            commit.getUuid(), runnableAtts.size());
+
+                    User user = new User(getCurrentUser().getLogin());
+
+                    // Run each with identified processor. Processor keep history if
+                    // needed
+                    runnableAtts.forEach(a -> {
+                        AttachmentProcessor proc = this.attachProcs.getFor(a);
+                        proc.execute(user, a);
+                        LOGGER.debug("Processing merge commit {} : attachements {} executed with success",
+                                commit.getUuid(), a.getName());
+                    });
+                }
+            }
+        }
+
+        // Update commit attachments
+        if (prepared.getCommitData().getAttachments() != null) {
+            this.attachments.saveAll(prepareAttachments(prepared.getCommitData().getAttachments(), commit));
+        }
+
+        LOGGER.info("Commit {} saved with {} items and {} lobs", commit.getUuid(), entries.size(), newLobs.size());
+
+        return commit.getUuid();
+    }
+
+    /**
+     * <p>
      * Reserved for launch from <tt>PilotableCommitPreparationService</tt>
      *
      * @param importFile         content to import

@@ -1,11 +1,10 @@
 package fr.uem.efluid.services;
 
-import fr.uem.efluid.model.entities.CommitState;
-import fr.uem.efluid.model.entities.DictionaryEntry;
-import fr.uem.efluid.model.entities.Project;
-import fr.uem.efluid.model.entities.Version;
+import fr.uem.efluid.model.entities.*;
+import fr.uem.efluid.model.entities.IndexAction;
 import fr.uem.efluid.model.repositories.DatabaseDescriptionRepository;
 import fr.uem.efluid.model.repositories.DictionaryRepository;
+import fr.uem.efluid.model.repositories.IndexRepository;
 import fr.uem.efluid.model.repositories.VersionRepository;
 import fr.uem.efluid.services.types.*;
 import fr.uem.efluid.tools.AsyncDriver;
@@ -21,6 +20,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -84,6 +86,12 @@ public class PilotableCommitPreparationService {
 
     @Autowired
     private AttachmentProcessor.Provider attachProcs;
+
+    @Autowired
+    private ApplyDiffService appDiffService;
+
+    @Autowired
+    private IndexRepository index;
 
     @Autowired
     private AsyncDriver async;
@@ -339,10 +347,35 @@ public class PilotableCommitPreparationService {
      */
     public DiffContentPage getPaginatedDiffContent(int pageIndex, DiffContentSearch currentSearch) {
 
-        // Apply pagination on filtered content directly
         return new DiffContentPage(pageIndex, getFilteredDiffContent(currentSearch), this.diffDisplayPageSize);
+
     }
 
+    public Collection<PreparedIndexEntry> updateDataRevert (Collection<PreparedIndexEntry> listIndex) {
+        listIndex.forEach(
+                y -> {
+                    String tmp = y.getPayload();
+                    y.setPayload(y.getPrevious());
+                    y.setPrevious(tmp);
+
+                    y.setRollbacked(true);
+                    y.setSelected(false);
+                    y.setDomainName(y.getDomainName());
+                    y.setTableName(y.getTableName());
+
+                    if (y.getAction() == IndexAction.ADD) {
+                        y.setAction(IndexAction.REMOVE);
+                    } else if (y.getAction() == IndexAction.REMOVE) {
+                        y.setAction(IndexAction.ADD);
+                    } else {
+                        y.setAction(IndexAction.UPDATE);
+                    }
+
+                }
+        );
+
+        return listIndex;
+    }
 
     /**
      * <p>
@@ -673,6 +706,48 @@ public class PilotableCommitPreparationService {
         return result;
     }
 
+    public UUID createCommitForRevertLot(String uuid){
+
+        PilotedCommitPreparation<?> current = getCurrentCommitPreparation();
+        CommitDetails commit = this.commitService.getExistingCommitDetails(UUID.fromString(uuid), false);
+        String nameCommit = commit.getComment();
+        commit.setIsRevert(true);
+
+        if (current.getCommitData() == null) {
+
+            current.setCommitData(new CommitEditData());
+
+        }
+
+        current.setStatus(PilotedCommitStatus.COMMIT_PREPARED);
+
+        current.getCommitData().setComment("Revert for " + nameCommit);
+
+        // Apply rollbacks on local commits only
+
+        this.commitService.applyExclusionsFromLocalCommit(current);
+
+        current.setStatus(PilotedCommitStatus.ROLLBACK_APPLIED);
+
+        //set diff for current project
+
+        current.setDiffContent(this.updateDataRevert(this.commitService.loadCommitIndex(UUID.fromString(uuid))));
+
+        // Save update
+        UUID commitUUID = this.commitService.saveAndApplyPreparedCommitForRevert(current);
+
+        // Reset cached diff values, if any, for further uses
+        this.diffService.resetDiffCaches();
+
+        // Drop preparation (if not done yet)
+        completeCommitPreparation();
+
+        LOGGER.info("Saving completed for commit preparation. New commit is {}", commitUUID);
+
+        return commitUUID;
+
+    }
+
     /**
      * <p>
      * Generic saving process. Declined with fixed type for clean frontend form push
@@ -729,6 +804,7 @@ public class PilotableCommitPreparationService {
 
         PilotedCommitPreparation<?> current = getCurrentCommitPreparation();
 
+
         // Filter and sort content regarding the specified search
         if (current != null) {
 
@@ -774,7 +850,12 @@ public class PilotableCommitPreparationService {
 
         // If not done yet, init for comment apply
         if (current.getCommitData() == null) {
-            current.setCommitData(new CommitEditData());
+            //current.setCommitData(new DiffContentPage(0, getFilteredDiffContent("this"), this.diffDisplayPageSize));
+        }
+
+        if(data == null){
+            data = new CommitEditData();
+            data.setComment("test");
         }
 
         // Other editable is the commit comment

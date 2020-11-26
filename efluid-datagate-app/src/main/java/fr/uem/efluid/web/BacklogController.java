@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartHttpServletRequest;
 
 import javax.validation.Valid;
+import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 
 import static org.springframework.web.bind.annotation.RequestMethod.GET;
@@ -53,6 +55,13 @@ public class BacklogController extends CommonController {
 
     @Autowired
     private ApplyDiffService diffService;
+
+    @Autowired
+    PrepareIndexService prepIndex;
+
+    DiffContentSearch diffContentSearch;
+
+    DiffContentHolder diffContentHolder;
 
     /**
      * <p>
@@ -172,6 +181,23 @@ public class BacklogController extends CommonController {
             @RequestBody(required = false) DiffContentSearch search) {
 
         return this.pilotableCommitService.getPaginatedDiffContent(page, search);
+
+    }
+
+    /**
+     * @param uuid
+     * @return
+     */
+    @RequestMapping(path = "/revert/{uuid}", method = {POST})
+    @ResponseBody
+    public String revert(@PathVariable("uuid") String uuid) {
+
+        this.pilotableCommitService.startLocalCommitPreparation(true);
+        this.pilotableCommitService.updateDataRevert(this.commitService.loadCommitIndex(UUID.fromString(uuid)));
+        this.pilotableCommitService.createCommitForRevertLot(uuid);
+
+        return "pages/commits";
+
     }
 
     /**

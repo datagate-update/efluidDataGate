@@ -42,6 +42,8 @@ public class CommitEditData {
 	private String versionModelId;
 
 	private List<AttachmentLine> attachments;
+
+	private Boolean isRevert;
 	
 	/**
 	 * 
@@ -243,6 +245,10 @@ public class CommitEditData {
 	public void setAttachments(List<AttachmentLine> attachments) {
 		this.attachments = attachments;
 	}
+
+	public void setIsRevert(Boolean isRevert) { this.isRevert = isRevert; }
+
+	public Boolean getIsRevert() { return this.isRevert; }
 
 	/**
 	 * @param commit

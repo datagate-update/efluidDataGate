@@ -23,7 +23,7 @@ import java.util.stream.Stream;
  */
 public abstract class DiffContentHolder<T extends PreparedIndexEntry> {
 
-    private final Collection<T> diffContent;
+    private Collection<T> diffContent;
 
     private final Map<UUID, DictionaryEntrySummary> referencedTables;
 
@@ -112,6 +112,10 @@ public abstract class DiffContentHolder<T extends PreparedIndexEntry> {
 
     public void setDisplayAll(boolean displayAll) {
         this.displayAll = displayAll;
+    }
+
+    public void setDiffContent(Collection<PreparedIndexEntry>test){
+        this.diffContent = (Collection<T>) test;
     }
 
     /**

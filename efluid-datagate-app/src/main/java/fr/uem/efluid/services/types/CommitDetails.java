@@ -40,6 +40,8 @@ public class CommitDetails extends DiffContentHolder<PreparedIndexEntry> {
     // For attachments
     private boolean attachmentDisplaySupport;
 
+    private boolean isRevert = false;
+
     /**
      *
      */
@@ -223,6 +225,10 @@ public class CommitDetails extends DiffContentHolder<PreparedIndexEntry> {
     public void setAttachmentDisplaySupport(boolean attachmentDisplaySupport) {
         this.attachmentDisplaySupport = attachmentDisplaySupport;
     }
+
+    public void setIsRevert(Boolean isRevert) { this.isRevert = isRevert; }
+
+    public Boolean getIsRevert() { return this.isRevert; }
 
     /**
      * @return
